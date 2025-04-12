@@ -1,6 +1,7 @@
 import rospy
 # from std_msgs.msg import String
 # ROS1노드 클래스가 존재하지 않음 import Node X
+# 그래서 객체지향으로 코드를 작성하기 어려움 즉 ROS_02를 사용해야한다.
 from geometry_msgs.msg import Twist
 
 def main():
