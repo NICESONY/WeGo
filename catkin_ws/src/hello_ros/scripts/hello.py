@@ -9,11 +9,14 @@ def main():
     i=0
     data.data = f"hellom, ROS! netic {i}"
     rate = rospy.Rate(3)
-    while True:
+    while not rospy.is_shutdown():
         pub.publish(data)
         print("hello, ROS1 noetic!!")
         rate.sleep()
         i += 1
 
 if __name__ == "__main__":
-    main()
+    try :
+        main()
+    except rospy.ROSInterruptException :
+        pass
