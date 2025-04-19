@@ -11,21 +11,14 @@ def main():
     i=0
     # data.data = f"hellom, ROS! netic {i}"
     
-    # data.linear.x = 0.0
-    data.angular.z = 3.0
-    velocity = 0.0
+    data.linear.x = 2.0
+    data.angular.z = 1.0
 
     rate = rospy.Rate(10) # 10hz
     while not rospy.is_shutdown():
-        data.linear.x = velocity
-        velocity += 0.05
-        
         pub.publish(data)
-        rate.sleep()
         # print("hello, ROS1 noetic!!")
-        if velocity >= 10 :
-            velocity = 10
-        
+        rate.sleep()
         # i += 1
 
 if __name__ == "__main__":
