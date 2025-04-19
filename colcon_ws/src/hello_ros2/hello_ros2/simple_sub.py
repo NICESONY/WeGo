@@ -11,8 +11,6 @@ class simple_sub(Node):
         # print(msg.data)
         self.get_logger().info(msg.data)
 
-    
-
 # if you want to run this code
 # ros2 topic pub --rate 1 /message std_msgs/msg/String "data 'hi'"
 

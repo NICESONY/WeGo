@@ -13,9 +13,6 @@ class simple_pub(Node):
         msg.data = "hello ros2"
         self.pub.publish(msg)
 
-
-
-
 def main():
     rp.init()
     node = simple_pub()
