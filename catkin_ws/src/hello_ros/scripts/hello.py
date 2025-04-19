@@ -1,23 +1,29 @@
-#! /usr/bin/python3
+#!/usr/bin/env python3
 import rospy
 from std_msgs.msg import String
-# ROS1노드 클래스가 존재하지 않음 import Node X
+
+class HelloNode:
+    def __init__(self):
+        # 퍼블리셔 선언
+        self.pub = rospy.Publisher('message', String, queue_size=10)
+        self.i = 0
+        # 0.33초 간격으로 콜백 실행 (Duration으로 감싸야 합니다)
+        rospy.Timer(rospy.Duration(0.33), self.print_hello)
+
+    def print_hello(self, event):
+        msg = String()
+        msg.data = f"hello, ROS! noetic {self.i}"
+        self.i += 1
+        self.pub.publish(msg)
+        rospy.loginfo(f"Published: {msg.data}")
 
 def main():
-    rospy.init_node('hello', anonymous=True)
-    pub = rospy.Publisher('message', String, queue_size=10)
-    data = String()
-    i=0
-    data.data = f"hellom, ROS! netic {i}"
-    rate = rospy.Rate(3)
-    while not rospy.is_shutdown():
-        pub.publish(data)
-        print("hello, ROS1 noetic!!")
-        rate.sleep()
-        i += 1
+    rospy.init_node('hello_node', anonymous=True)
+    node = HelloNode()
+    rospy.spin()
 
 if __name__ == "__main__":
-    try :
+    try:
         main()
-    except rospy.ROSInterruptException :
+    except rospy.ROSInterruptException:
         pass
