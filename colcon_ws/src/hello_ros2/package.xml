@@ -4,7 +4,7 @@
   <name>hello_ros2</name>
   <version>0.0.0</version>
   <description>TODO: Package description</description>
-  <maintainer email="github">son</maintainer>
+  <maintainer email="songunhee5426@gmail.com">son</maintainer>
   <license>TODO: License declaration</license>
 
   <test_depend>ament_copyright</test_depend>
