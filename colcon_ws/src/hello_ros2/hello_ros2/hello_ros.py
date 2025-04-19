@@ -6,18 +6,22 @@ from rclpy.node import Node
 class Hello(Node):
     def __init__(self) :
         super().__init__("hello_ros")
+        self.create_timer(1, self.print_hello)
 
-def print_hello():
-    print("hello ROS2 Humble")
+    def print_hello(self):
+        print("hello ROS2 Humble !!")
+
+
 
 def main():
     rp.init()
     node = Hello()
-    node.create_timer(1, print_hello)
+
     try :
         rp.spin(node)
     except KeyboardInterrupt:
         node.destroy_node()
+        
     rp.spin(node)
     
 
