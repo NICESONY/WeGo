@@ -1,0 +1,6 @@
+build/
+install/
+log/
+
+echo -e "__pycache__/\n*.py[cod]" >> .gitignore
+git add .gitignore
