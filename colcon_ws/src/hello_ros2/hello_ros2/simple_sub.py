@@ -7,6 +7,7 @@ class simple_sub(Node):
         super().__init__("simple_sub")
         self.sub = self.create_subscription(String, "/message", self.simple_callback, 10)
 
+# test
     def simple_callback(self, msg : String) -> None:
         # print(msg.data)
         self.get_logger().info(msg.data)
