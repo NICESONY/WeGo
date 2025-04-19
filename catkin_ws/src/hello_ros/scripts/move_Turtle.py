@@ -1,3 +1,4 @@
+#! /usr/bin/python3
 import rospy
 # from std_msgs.msg import String
 # ROS1노드 클래스가 존재하지 않음 import Node X
