@@ -10,7 +10,7 @@ class Hello(Node):
         self.count = 0
 
     def print_hello(self):
-        print(f"hello ROS2 Humble !!{self.count}")
+        print(f"hello ROS2 Humble !! {self.count}")
         self.count += 1
 
 
