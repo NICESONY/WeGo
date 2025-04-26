@@ -1,0 +1,28 @@
+import rospy
+from std_srvs.srv import SetBool, SetBoolResponse,  SetBoolRequest   ## 기본적인 5개에서 10개 사이의 라이브러리 가 존재한다.
+
+
+class ServiceServer :
+    def __init__(self):
+        self.srv = rospy.Service("setBool", SetBool, self.setBool_Callback)
+        self.bool = False
+
+    def setBool_Callback(self, request) :
+        response = SetBoolResponse()
+        # 서버가 처리하는 코드 ...
+        self.bool = request.data ## true or false 로 들어온다
+        response.message = "bool succes"
+        response.success = True
+        return response
+        
+
+def main():
+    rospy.init_node("ServiceServer")
+    node = ServiceServer()
+    try :
+        rospy.spin()
+    except rospy.ROSInterruptException :
+        pass
+
+if __name__ =="__main__" :
+    main()
