@@ -1,0 +1,75 @@
+#!/usr/bin/env python3
+
+import asyncio
+
+import rospy
+from std_srvs.srv import SetBool, SetBoolRequest, SetBoolResponse
+
+
+class SerivceClinet:
+    def __init__(self):
+        self.client = rospy.ServiceProxy('setBool', SetBool)
+        self.request = SetBoolRequest()
+        self.toggle = False
+        self.wait_for_service()
+        self.loop = asyncio.get_event_loop()
+
+    def wait_for_service(self):
+        while not rospy.is_shutdown():
+            try:
+                self.client.wait_for_service(timeout=1.0)
+                rospy.loginfo("서비스에 연결 되었습니다.")
+                break
+            except rospy.ROSException:
+                rospy.loginfo("서비스를 사용할 수 없다.")
+                # await asyncio.sleep(1.0)
+
+    async def send_request(self):
+        self.toggle = not self.toggle
+        self.request.data = self.toggle
+        rospy.loginfo(f"보내는 데이터 : {self.request.data}")
+        try:
+            response = await self.async_service_call()
+            await self.done_callback(response)
+        except rospy.ServiceException as e:
+            rospy.loginfo(f"서비스 요청 실패: {e}")
+
+    async def async_service_call(self):
+        future = self.loop.run_in_executor(None, self.client.call, self.request)
+        return await future
+
+    async def done_callback(self, response : SetBoolResponse):
+        rospy.loginfo(f"{response.message}")
+        rospy.loginfo(f"{response.success}")
+
+    async def periodic_request(self):
+        while not rospy.is_shutdown():
+            await self.send_request()
+            await asyncio.sleep(4)
+
+    async def update(self):
+        while not rospy.is_shutdown():
+            rospy.loginfo("updating!!")
+            await asyncio.sleep(0.5)
+
+    async def run(self):
+        # await self.wait_for_service()
+        await asyncio.gather(self.update(), self.periodic_request())
+
+def main():
+    rospy.init_node('service_client')
+    node = SerivceClinet()
+    loop = node.loop
+    try:
+        loop.run_until_complete(node.run())
+    except KeyboardInterrupt:
+        pass
+    finally:
+        rospy.signal_shutdown("Shutdown")
+        loop.close()
+
+if __name__ == "__main__":
+    try:
+        main()
+    except rospy.ROSInterruptException:
+        pass
