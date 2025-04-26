@@ -214,3 +214,12 @@ catkin_install_python(PROGRAMS
   scripts/move_Turtle.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
+
+
+
+## launch 폴더를 설치 디렉토리로 복사
+install(DIRECTORY launch/
+        DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
+        FILES_MATCHING PATTERN "*.launch"
+        PATTERN ".svn" EXCLUDE
+)
