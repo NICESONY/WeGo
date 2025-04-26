@@ -164,6 +164,7 @@ catkin_install_python(PROGRAMS
   scripts/msub
   scripts/mpub
   scripts/simpleServiceServer
+  scripts/simpleServiceClient
   
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )

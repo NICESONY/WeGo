@@ -1,0 +1,33 @@
+#!/usr/bin/env python3
+import rospy
+from std_srvs.srv import SetBool, SetBoolResponse,  SetBoolRequest  
+
+
+# 클라이언트는 주로 PUB이라고 생각하면 된다.
+class ServiceClient:
+    def __init__(self):
+        self.client = rospy.ServiceProxy('setBool', SetBool)
+        self.client.wait_for_service(timeout= 1.0)
+
+
+    def send_request(self):
+        data = SetBoolRequest()
+        data.data = True
+        response = self.client.call(data) # 동기적 !! 5초 대기??
+        rospy.loginfo(f"{response.message}")
+        rospy.loginfo(f"{response.success}")
+
+
+
+def main():
+    rospy.init_node('ServiceClient')
+    node = ServiceClient()
+    node.send_request()
+    # while not rospy.is_shutdown():
+    #     rospy.spin()
+
+if __name__ == "__main__":
+    main()
+
+
+
