@@ -1,0 +1,4 @@
+<launch>
+    <node name="mtpub" pkg="hello_ros" type="mtpub" output="screen"/>
+    <node name="mtsub" pkg="hello_ros" type="mtsub" output="screen"/>
+</launch>
