@@ -1,6 +1,7 @@
 import rospy
 from std_srvs.srv import SetBool, SetBoolResponse,  SetBoolRequest   ## 기본적인 5개에서 10개 사이의 라이브러리 가 존재한다.
 import time
+import threading
 
 class ServiceServer :
     def __init__(self) :
@@ -8,9 +9,16 @@ class ServiceServer :
         self.bool = False
         rospy.Timer(rospy.Duration(secs=3.0), self.print_state)
 
-    def setBool_Callback(self, request) :
+    def setBool_Callback(self, request) : ## 비동기 처리 상황임?? 서비스인데고 멀티쓰래드를 비동기로 처리하는 것은 신기하네
         response = SetBoolResponse()
+        thread = threading.Thread(
+            target = self.async_service_hd, 
+            args = (request, response))
+        
+        thread.start()
+        # 같은 변수에 여러개의 쓰래드가 존재하는 것을 경계하는 것
 
+    def async_service_hd(self, request, response):
         # 서버가 처리하는 코드 ....
         rospy.loginfo("service strart")
         self.bool = request.data ## true or false 로 들어온다
