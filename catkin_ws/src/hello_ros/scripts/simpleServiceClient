@@ -7,10 +7,15 @@ from std_srvs.srv import SetBool, SetBoolResponse,  SetBoolRequest
 class ServiceClient:
     def __init__(self):
         self.client = rospy.ServiceProxy('setBool', SetBool)
-        self.client.wait_for_service(timeout= 1.0)
+        while not rospy.is_shutdown():
+            try :
+                self.client.wait_for_service(timeout= 1.0)
+                break
+            except rospy.ROSException:
+                rospy.loginfo("service not available")
 
 
-    def send_request(self):
+    def send_request(self) :
         data = SetBoolRequest()
         data.data = True
         response = self.client.call(data) # 동기적 !! 5초 대기??
@@ -22,7 +27,7 @@ class ServiceClient:
 def main():
     rospy.init_node('ServiceClient')
     node = ServiceClient()
-    node.send_request()
+    # node.send_request() 필요한 곳에 쓴다
     # while not rospy.is_shutdown():
     #     rospy.spin()
 
