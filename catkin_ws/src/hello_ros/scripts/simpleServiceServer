@@ -1,43 +1,42 @@
-import rospy
-from std_srvs.srv import SetBool, SetBoolResponse,  SetBoolRequest   ## 기본적인 5개에서 10개 사이의 라이브러리 가 존재한다.
-import time
 import threading
+import time
 
-class ServiceServer :
-    def __init__(self) :
-        self.srv = rospy.Service("setBool", SetBool, self.setBool_Callback)
+import rospy
+from std_srvs.srv import SetBool, SetBoolRequest, SetBoolResponse
+
+
+class ServiceServer:
+    def __init__(self):
+        self.srv = rospy.Service('setBool', SetBool, self.setBool_callback)
         self.bool = False
         rospy.Timer(rospy.Duration(secs=3.0), self.print_state)
 
-    def setBool_Callback(self, request) : ## 비동기 처리 상황임?? 서비스인데고 멀티쓰래드를 비동기로 처리하는 것은 신기하네
+    def setBool_callback(self, request: SetBoolRequest):
         response = SetBoolResponse()
-        thread = threading.Thread(
-            target = self.async_service_hd, 
-            args = (request, response))
-        
+        thread = threading.Thread(target=self.async_service_hd, args=(request, response))
         thread.start()
-        # 같은 변수에 여러개의 쓰래드가 존재하는 것을 경계하는 것
+        thread.join()
+        return response
 
     def async_service_hd(self, request, response):
         # 서버가 처리하는 코드 ....
-        rospy.loginfo("service strart")
-        self.bool = request.data ## true or false 로 들어온다
-        response.message = "bool succes"
+        rospy.loginfo("서비스 처리 시작")
+        self.bool = request.data
+        response.message = "Bool 변경이 성공!"
         response.success = True
         time.sleep(5)
-        rospy.loginfo("service end")
-        return response
-        
-    def print_state(self, _envet):
-        rospy.loginfo("main threed...")
+        rospy.loginfo("서비스 처리 끝")
+
+    def print_state(self, _evnet):
+        rospy.loginfo("main 쓰레드...")
 
 def main():
-    rospy.init_node("ServiceServer")
-    node = ServiceServer()
-    try :
+    rospy.init_node("service_server")
+    noe = ServiceServer()
+    try:
         rospy.spin()
-    except rospy.ROSInterruptException :
+    except rospy.ROSInterruptException:
         pass
 
-if __name__ =="__main__" :
+if __name__ == "__main__":
     main()
