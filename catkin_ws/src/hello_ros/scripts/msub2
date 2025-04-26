@@ -4,29 +4,27 @@ import rospy
 from std_msgs.msg import Header
 from std_msgs.msg import String
 
-
-class MTsub:
+class Msub2:
     def __init__(self):
-        self.sub = rospy.Subscriber('time', Header, self.sub_callback)
+        self.sub = rospy.Subscriber('message2', String, self.sub_callback)
         self.sub_02 = rospy.Subscriber('message', String, self.sub_callback_02)
 
-        self.i=0
 
-    def sub_callback(self, msg : Header) -> None:
-        rospy.loginfo(f"들어온 메세지 : {msg.frame_id}")
-        rospy.loginfo(f"들어온 시간 : {msg.stamp.secs}")
+
+    def sub_callback(self, msg : String) -> None:
+        rospy.loginfo(f"들어온 메세지 : {msg.data}")
+       
 
     def sub_callback_02(self, msg : String) -> None:
         rospy.loginfo(f"들어온 메세지 : {msg.data}")
-
-
+       
 
 
 
 
 def main():
-    rospy.init_node('mtsub')
-    node = MTsub()
+    rospy.init_node('msub2')
+    node = Msub2()
     while not rospy.is_shutdown():
         rospy.spin()
 

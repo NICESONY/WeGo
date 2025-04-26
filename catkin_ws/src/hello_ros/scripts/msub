@@ -1,0 +1,28 @@
+#!/usr/bin/env python3
+
+import rospy
+from std_msgs.msg import Header
+from std_msgs.msg import String
+
+class Msub:
+    def __init__(self):
+        self.sub = rospy.Subscriber('message', String, self.sub_callback)
+   
+    def sub_callback(self, msg : String) -> None:
+        rospy.loginfo(f"들어온 메세지 : {msg.data}")
+
+
+
+
+
+def main():
+    rospy.init_node('msub')
+    node = Msub()
+    while not rospy.is_shutdown():
+        rospy.spin()
+
+if __name__ == "__main__":
+    try:
+        main()
+    except rospy.ROSInterruptException:
+        pass

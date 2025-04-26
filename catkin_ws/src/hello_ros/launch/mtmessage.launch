@@ -1,4 +1,14 @@
 <launch>
     <node name="mtpub" pkg="hello_ros" type="mtpub" output="screen"/>
     <node name="mtsub" pkg="hello_ros" type="mtsub" output="screen"/>
+    <node name="msub" pkg="hello_ros" type="msub" output="screen"/>
+    <node name="mpub" pkg="hello_ros" type="mpub" output="screen"/>
+    <node name="msub2" pkg="hello_ros" type="msub2" output="screen"/>
 </launch>
+
+  <!--
+    node name = node name
+    pkg = pkg name
+    type = file name
+    output = screen
+  -->
