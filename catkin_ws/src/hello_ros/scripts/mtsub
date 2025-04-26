@@ -1,0 +1,41 @@
+#!/usr/bin/env python3
+
+import rospy
+from std_msgs.msg import Header
+
+
+class MTsub:
+    def __init__(self):
+        self.sub = rospy.Subscriber('time', Header, self.sub_callback)
+        ## 콜백 함수는 콜이 들어왔을때 back을 한다.
+
+        # self.data = Header()
+        # rospy.Timer(rospy.Duration(nsecs=330_000_000), self.print_hello)
+        self.i=0
+
+    def sub_callback(self, msg : Header) -> None:
+        rospy.loginfo(f"들어온 메세지 : {msg.frame_id}")
+        rospy.loginfo(f"들어온 시간 : {msg.stamp.secs}")
+
+
+
+
+    # def print_hello(self, _event):
+    #     self.data.frame_id = "base time by MTpub"
+    #     self.data.stamp = rospy.Time.now()
+    #     rospy.loginfo(self.data.frame_id)
+    #     rospy.loginfo(f'{self.data.stamp.secs} : {self.data.stamp.nsecs}')
+    #     self.pub.publish(self.data)
+
+
+def main():
+    rospy.init_node('mtsub')
+    node = MTsub()
+    while not rospy.is_shutdown():
+        rospy.spin()
+
+if __name__ == "__main__":
+    try:
+        main()
+    except rospy.ROSInterruptException:
+        pass

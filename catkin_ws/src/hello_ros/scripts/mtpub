@@ -20,7 +20,7 @@ class MTpub:
 
 
 def main():
-    rospy.init_node('hello')
+    rospy.init_node('mtpub')
     node = MTpub()
     while not rospy.is_shutdown():
         rospy.spin()

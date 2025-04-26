@@ -155,11 +155,11 @@ catkin_python_setup()
 catkin_package()
 
 
-
 catkin_install_python(PROGRAMS
   scripts/hello
   scripts/move_Turtle
   scripts/mtpub
+  scripts/mtsub
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
