@@ -1,4 +1,4 @@
 <launch>
-    <node name="hello" pkg="hello_ros" type="hello.py" output="screen"/>
-    <node name="move_turtle" pkg="hello_ros" type="move_turtle.py" output="screen"/>
+    <node name="hello" pkg="hello_ros" type="hello" output="screen"/>
+    <node name="move_turtle" pkg="hello_ros" type="move_turtle" output="screen"/>
 </launch>

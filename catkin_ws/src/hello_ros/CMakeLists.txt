@@ -210,8 +210,8 @@ include_directories(
 
 
 catkin_install_python(PROGRAMS
-  scripts/hello.py
-  scripts/move_Turtle.py
+  scripts/hello
+  scripts/move_Turtle
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
