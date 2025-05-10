@@ -34,10 +34,10 @@ class Service_Client(Node):
         self.cnt += 1
 
     def done_callback(self, future):
-        response : SetBool.Response = future.result()
+        response : SetBool.Response = future.result() # 확보된 공간을 볼 수 있음
         self.get_logger().info(f"{response.message}")
         self.get_logger().info(f"{response.success}")
-
+        # future 란 비동기로 처리를 해놓고 나중에 사용가능 
 
 def main():
     rp.init()
