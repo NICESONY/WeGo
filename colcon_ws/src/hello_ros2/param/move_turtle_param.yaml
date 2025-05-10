@@ -1,0 +1,8 @@
+/move_turtle_param:
+  ros__parameters:
+    ang_vel: 1.0
+    init_lin: 0.005
+    lin_inc: 0.02
+    period: 1.0
+    use_sim_time: false
+

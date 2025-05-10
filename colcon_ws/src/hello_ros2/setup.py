@@ -18,6 +18,9 @@ setup(
         # launch 디렉터리 안의 모든 .launch.py 파일을 설치하기 위한 설정
         ('share/' + package_name + '/launch',
          glob(os.path.join('launch', '*.launch.py'))),
+        # param folder make 
+        ('share/' + package_name + '/param',
+         glob(os.path.join('param', '*.yaml'))),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -36,6 +39,9 @@ setup(
             'simpleServiceClient = hello_ros2.simpleServiceClient:main',
             'simpleServiceServer2 = hello_ros2.simpleServiceServer2:main', # 명령어, 패키지, 파일 이름, main
             'simple_parameter = hello_ros2.simple_parameter:main', # 명령어, 패키지, 파일 이름, main
+            'mutil_parameter = hello_ros2.mutil_parameter:main', # 명령어, 패키지, 파일 이름, main
+            'change_color_client = hello_ros2.change_color_client:main', # 명령어, 패키지, 파일 이름, main
+            'move_turtle_param = hello_ros2.move_turtle_param:main',
         ],
     },
 )
