@@ -26,6 +26,19 @@ class Service_Client(Node):
         self.get_logger().info("main Thread is running")
 
 
+    """
+    (타이머 이벤트) ──► send_request()
+                        │
+                        │ call_async()  ──► DDS 패킷 송신
+                        │                    (Future 객체 반환)
+                        │
+                        └─► add_done_callback(self.done_callback)
+                                    └─[대기]─────┬─(서비스 응답 도착)─► future.set_result(resp)
+                                                │
+                                Executor가 콜백 호출 ───────► done_callback(future)
+
+    """
+
     def send_request(self):
         self.get_logger().info(f"{self.cnt}번째 요청")
         self.request.data = not self.request.data
