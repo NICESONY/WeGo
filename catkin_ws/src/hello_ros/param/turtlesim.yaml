@@ -1,0 +1,10 @@
+rosdistro: 'noetic
+
+  '
+roslaunch:
+  uris:
+    host_samson__37053: http://samson:37053/
+rosversion: '1.17.0
+
+  '
+run_id: d4145a1c-2d72-11f0-b6f9-000c29f137c1

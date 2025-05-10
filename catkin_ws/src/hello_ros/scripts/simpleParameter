@@ -1,0 +1,31 @@
+#!/usr/bin/env python3
+
+import rospy
+
+
+class SimpleParameter:
+    def __init__(self):
+        rospy.set_param("~para1", 100)
+        self.para1 = rospy.get_param("~para1", 0)
+        rospy.Timer(rospy.Duration(nsecs=330_000_000), self.update)
+
+    def update(self, _event):
+        new_val = rospy.get_param('~para1', self.para1)
+        if new_val != self.para1:
+            rospy.loginfo(f"변경 감지! para1 새로운 값은 : {new_val}")
+            self.para1 = new_val
+        rospy.loginfo(f"현재 파라미터값은 : {self.para1}")
+        # self.para1 = self.para1 + 1 # type: ignore
+
+
+def main():
+    rospy.init_node('simpleParameter')
+    node = SimpleParameter()
+    while not rospy.is_shutdown():
+        rospy.spin()
+
+if __name__ == "__main__":
+    try:
+        main()
+    except rospy.ROSInterruptException:
+        pass
