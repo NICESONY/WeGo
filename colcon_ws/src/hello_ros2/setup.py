@@ -34,6 +34,8 @@ setup(
             'simple_pub = hello_ros2.simple_pub:main',
             'simpleServiceServer = hello_ros2.simpleServiceServer:main',
             'simpleServiceClient = hello_ros2.simpleServiceClient:main',
+            'simpleServiceServer2 = hello_ros2.simpleServiceServer2:main', # 명령어, 패키지, 파일 이름, main
+            
         ],
     },
 )
