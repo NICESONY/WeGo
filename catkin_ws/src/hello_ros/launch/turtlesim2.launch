@@ -1,0 +1,10 @@
+<launch>
+    <!-- 파라미터 로드 -->
+    <rosparam file="$(find hello_ros)/param/turtlesim.yaml" command="load" />
+
+    <!-- turtlesim 노드 -->
+    <node name="turtlesim_node" pkg="turtlesim" type="turtlesim_node" />
+
+    <!-- turtle_controller 노드 -->
+    <node name="move_turtle" pkg="hello_ros" type="moveTurtleClass" output="screen" />
+</launch>

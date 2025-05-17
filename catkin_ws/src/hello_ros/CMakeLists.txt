@@ -9,6 +9,7 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   roscpp
   rospy
+  dynamic_reconfigure   # ← 반드시 포함
   std_msgs
   message_generation      # 메시지 • 서비스 • 액션 생성용
   actionlib_msgs          # 액션 메시지 타입
@@ -21,6 +22,14 @@ find_package(catkin REQUIRED COMPONENTS
 # setup.py가 있는 경우 반드시 generate_messages()보다 먼저 호출해야 합니다.
 catkin_python_setup()
 
+
+
+###################################
+## Dynamic-reconfigure (.cfg)    ##
+###################################
+generate_dynamic_reconfigure_options(
+  cfg/SimpleParameter.cfg        # cfg/ 디렉터리에 여러 개면 줄로 추가
+)
 
 
 ###################################
@@ -69,6 +78,8 @@ catkin_package(
     roscpp
     rospy
     std_msgs
+    dynamic_reconfigure       # ← 추가
+    actionlib_msgs            # ← 액션을 쓰면 함께 추가
 )
 
 ###########
@@ -93,6 +104,7 @@ catkin_install_python(PROGRAMS
   scripts/simpleServiceClient
   scripts/simpleServiceClient2
   scripts/simpleParameter
+  scripts/simpleParameter2
   scripts/myTopicPub
   scripts/myTopicSub
   scripts/addServer

@@ -1,0 +1,46 @@
+#!/usr/bin/env python3
+import rospy
+from dynamic_reconfigure.server import Server
+from hello_ros.cfg import SimpleParameterConfig
+
+
+"""
+# 새 터미널 B
+# 현재 파라미터 확인
+rosrun dynamic_reconfigure dynparam get /simpleParameter
+
+# para1 값을 250으로 변경
+rosrun dynamic_reconfigure dynparam set /simpleParameter "para1" 250
+
+
+"""
+
+class SimpleParameter:
+    def __init__(self):
+        self.para1 = 100  # 초기값
+        self.srv = Server(SimpleParameterConfig, self.config_callback)
+        # 값 증가 로직을 위한 타이머 (원래 코드의 주기적 증가 유지)
+        self.timer = rospy.Timer(rospy.Duration(secs = 3.0), self.update)
+
+    def config_callback(self, config, level):
+        """Dynamic reconfigure 콜백: para1 변경 시 호출"""
+        self.para1 = config.para1
+        return config
+
+    def update(self, _event):
+        """주기적으로 para1 값을 증가시키고 로그 출력"""
+        rospy.loginfo(f"현재 파라미터값은 : {self.para1}")
+        # self.para1 += 1
+        # Dynamic reconfigure 파라미터 업데이트
+        # self.srv.update_configuration({"para1": self.para1})
+
+def main():
+    rospy.init_node('simpleParameter')
+    node = SimpleParameter()
+    rospy.spin()
+
+if __name__ == "__main__":
+    try:
+        main()
+    except rospy.ROSInterruptException:
+        pass

@@ -3,8 +3,8 @@ import rospy
 from hello_ros.msg import TimeWaitAction, TimeWaitFeedback, TimeWaitGoal, TimeWaitResult
 
 
-class ActionClient:
-    def __init__(self):
+class ActionClient :
+    def __init__(self) :
         self.client = actionlib.SimpleActionClient('timer_action', TimeWaitAction)
         rospy.loginfo("action 클라이언트가 요청 되었습니다.")
         self.client.wait_for_server() # 서버 요청을 기다림.
@@ -18,7 +18,7 @@ class ActionClient:
         if state == actionlib.GoalStatus().SUCCEEDED:
             rospy.loginfo(f"Action finished : {state} SUCCEEDED")
             rospy.loginfo(f"Result : 경과 시간 {result.time_elapsed}, 피드백 횟수 {result.updates_sent}")
-        if state == actionlib.GoalStatus().ABORTED:
+        if state == actionlib.GoalStatus().ABORTED :
             rospy.loginfo(f"Action finished : {state} aborted")
         if state == actionlib.GoalStatus().PENDING:
             rospy.loginfo(f"Action finished : {state} pending..")
@@ -30,7 +30,7 @@ class ActionClient:
         # 쓰래드 기능 (aysnc) or 비동기적으로 처리를 진행해서 병목현상을 막는다.
         # 서비스는 결과에 대한 완료 시점이 중요하다.
         # 프로세스가 2개 이상이거나 또는 라즈베리파이를 여러개를 진행할때 독립된 다른 프로세스에서 알 수 없을때
-        
+
 def main():
     rospy.init_node("action_client")
     node = ActionClient()

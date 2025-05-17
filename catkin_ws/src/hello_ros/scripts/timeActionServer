@@ -6,7 +6,7 @@ from hello_ros.msg import TimeWaitAction, TimeWaitFeedback, TimeWaitGoal, TimeWa
 
 
 class ActionServer :
-    def __init__(self):
+    def __init__(self) :
         self.server = actionlib.SimpleActionServer('timer_action', TimeWaitAction, self.callback, False)
         self.server.start()
         rospy.loginfo("action 서버가 시작 되었습니다.")
