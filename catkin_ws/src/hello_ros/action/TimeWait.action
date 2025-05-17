@@ -1,12 +1,12 @@
-# Goal
-float32 time_to_wait
+# Gaol
+float32 time_to_wait # 목표 wait 시간
 
 ---
 # Result
-float32 time_elapsed
-uint32 updates_sent
+float32 time_elapsed  # 완료까지 경과 시간
+uint32 updates_sent   # 피드백 횟수
 
 ---
-# Feedback
-float32 time_remaining
-float32 time_escape
+# feedback
+float32 time_remaining # 남은 시간
+float32 time_elapsed # 현재까지 경과 시간
