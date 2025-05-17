@@ -1,0 +1,12 @@
+# Goal
+float32 time_to_wait
+
+---
+# Result
+float32 time_elapsed
+uint32 updates_sent
+
+---
+# Feedback
+float32 time_remaining
+float32 time_escape

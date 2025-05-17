@@ -10,7 +10,9 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   std_msgs
-  message_generation
+  message_generation      # 메시지 • 서비스 • 액션 생성용
+  actionlib_msgs          # 액션 메시지 타입
+  actionlib               # (C++ 액션 클라이언트/서버 사용 시)
 )
 
 ###################################
@@ -39,11 +41,22 @@ add_service_files(
 )
 
 
+
+###################################
+## Declare ROS action         ##
+###################################
+add_action_files(
+  FILES
+  TimeWait.action
+)
+
+
 ## Generate added messages with any dependencies listed here
 generate_messages(
   DEPENDENCIES
   std_msgs
   geometry_msgs
+  actionlib_msgs
 )
 
 ###################################
@@ -84,6 +97,8 @@ catkin_install_python(PROGRAMS
   scripts/myTopicSub
   scripts/addServer
   scripts/addClient
+  scripts/timeActionServer
+  scripts/timeActionClient
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
