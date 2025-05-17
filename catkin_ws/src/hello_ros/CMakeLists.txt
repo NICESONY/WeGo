@@ -146,9 +146,13 @@ include_directories(
 ## same as for the library above
 # add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
+add_message_files(
+  FILES
+  MyTopic.msg
+)
 
 
-
+generate_messages()
 
 catkin_python_setup()
 
