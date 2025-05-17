@@ -48,6 +48,7 @@ setup(
             'change_color_client = hello_ros2.change_color_client:main', # 명령어, 패키지, 파일 이름, main
             'move_turtle_param = hello_ros2.move_turtle_param:main',
             'my_Topic_Pub = hello_ros2.my_Topic_Pub:main',
+            "add_server = hello_ros2.add_server:main",
         ],
     },
 )
