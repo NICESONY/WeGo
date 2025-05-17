@@ -1,15 +1,17 @@
+#!/usr/bin/env python3
+
 import actionlib
 import rospy
 from hello_ros.msg import TimeWaitAction, TimeWaitFeedback, TimeWaitGoal, TimeWaitResult
 
 
-class ActionServer:
+class ActionServer :
     def __init__(self):
         self.server = actionlib.SimpleActionServer('timer_action', TimeWaitAction, self.callback, False)
         self.server.start()
         rospy.loginfo("action 서버가 시작 되었습니다.")
 
-    def callback(self, goal: TimeWaitGoal):
+    def callback(self, goal: TimeWaitGoal) :
         # goal 메세지 전달!!
         feedback = TimeWaitFeedback()
         result = TimeWaitResult()
