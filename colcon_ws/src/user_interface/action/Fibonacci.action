@@ -1,0 +1,8 @@
+# goal
+int64 step
+---
+# result
+int64[] seq
+---
+# feedback
+int64[] temp_seq

@@ -27,7 +27,7 @@ setup(
         'rclpy',
         'std_msgs',
         'user_interface'
-                       ],      # ← 이 줄 추가],
+                       ],    
     zip_safe=True,
     maintainer='son',
     maintainer_email='you@example.com',
@@ -49,6 +49,7 @@ setup(
             'move_turtle_param = hello_ros2.move_turtle_param:main',
             'my_Topic_Pub = hello_ros2.my_Topic_Pub:main',
             "add_server = hello_ros2.add_server:main",
+            "action_server = hello_ros2.action_server:main",
         ],
     },
 )
