@@ -37,7 +37,7 @@ class Action_server(Node):
         # result 보내기
         print(type(goal_handle))
         goal_handle.succeed()  # 완료 status 보내기
-        # goal_handle.abort() # aborted 상태로 보내기
+        # goal_handle.abort()  # aborted 상태로 보내기
         result.seq = feedback.temp_seq
         return result  # action 종료
 

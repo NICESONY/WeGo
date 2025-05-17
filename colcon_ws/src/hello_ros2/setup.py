@@ -50,6 +50,7 @@ setup(
             'my_Topic_Pub = hello_ros2.my_Topic_Pub:main',
             "add_server = hello_ros2.add_server:main",
             "action_server = hello_ros2.action_server:main",
+            "action_client = hello_ros2.action_client:main",
         ],
     },
 )

@@ -6,3 +6,10 @@ int64[] seq
 ---
 # feedback
 int64[] temp_seq
+
+
+# 1. 액션 인터페이스의 `int64[] seq`와 `int64[] temp_seq`는 \*\*가변 길이 배열(시퀀스)\*\*입니다.
+# 2. ROS 2에서는 Python에서는 `list`로, C++에서는 `std::vector<int64_t>`로 매핑됩니다.
+# 3. 배열 값을 “지속적으로” 저장하려면 **액션 서버 코드가 내부 리스트/벡터를 직접 유지**하며 관리해야 합니다.
+# 4. 서버는 loop 안에서 `append`(또는 `push_back`)로 값을 추가한 뒤, **feedback**나 **result** 메시지에 복사해 퍼블리시합니다.
+# 5. 이 구조는 ROS 2의 Fibonacci 예제(`Fibonacci.action`)와 동일한 방식으로 동작합니다.

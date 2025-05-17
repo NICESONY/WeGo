@@ -19,6 +19,7 @@ find_package(builtin_interfaces   REQUIRED)   # ← 추가
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/MyTopic.msg"
   "srv/AddTwoInts.srv"
+  "action/Fibonacci.action"
   DEPENDENCIES std_msgs  builtin_interfaces                     
 )
 
