@@ -11,6 +11,7 @@ endif()
 find_package(ament_cmake           REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(builtin_interfaces   REQUIRED)   # ← 추가
 
 # -------------------------
 # msg/.srv 파일로 코드 생성
@@ -18,7 +19,7 @@ find_package(std_msgs REQUIRED)
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/MyTopic.msg"
   "srv/AddTwoInts.srv"
-  DEPENDENCIES std_msgs
+  DEPENDENCIES std_msgs  builtin_interfaces                     
 )
 
 # -------------------------

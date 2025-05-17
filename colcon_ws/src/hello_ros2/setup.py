@@ -22,7 +22,12 @@ setup(
         ('share/' + package_name + '/param',
          glob(os.path.join('param', '*.yaml'))),
     ],
-    install_requires=['setuptools'],
+    install_requires=[
+        'setuptools',
+        'rclpy',
+        'std_msgs',
+        'user_interface'
+                       ],      # ← 이 줄 추가],
     zip_safe=True,
     maintainer='son',
     maintainer_email='you@example.com',
@@ -42,6 +47,7 @@ setup(
             'mutil_parameter = hello_ros2.mutil_parameter:main', # 명령어, 패키지, 파일 이름, main
             'change_color_client = hello_ros2.change_color_client:main', # 명령어, 패키지, 파일 이름, main
             'move_turtle_param = hello_ros2.move_turtle_param:main',
+            'my_Topic_Pub = hello_ros2.my_Topic_Pub:main',
         ],
     },
 )

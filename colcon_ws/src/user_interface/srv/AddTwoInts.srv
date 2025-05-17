@@ -1,5 +1,5 @@
 # 요청 (request)
-std_msgs/Header head
+std_msgs/Header header
 int64 a
 int64 b
 string op
