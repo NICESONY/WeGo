@@ -1,0 +1,48 @@
+#!/usr/bin/env python3
+import rospy
+from std_srvs.srv import SetBool, SetBoolResponse,  SetBoolRequest  
+from hello_ros.srv import AddTwoInts, AddTwoIntsRequest, AddTwoIntsResponse
+import random
+
+# 클라이언트는 주로 PUB이라고 생각하면 된다.
+class ServiceClient:
+    def __init__(self):
+        self.client = rospy.ServiceProxy('add_two_int', AddTwoInts)
+        # 서비스 서버가 실행될 때까지 블로킹하지 않고(전체 노드를 멈추지 않고) 주기적으로(1초마다) 확인하기 위함
+        while not rospy.is_shutdown():
+            try :
+                self.client.wait_for_service(timeout= 1.0)
+                break
+            except rospy.ROSException:
+                rospy.loginfo("service not available")
+
+
+        rospy.Timer(rospy.Duration(3.0), self.send_request)
+
+
+    def send_request(self, _event) :
+        data = AddTwoIntsRequest()
+        data.a = random.randint(0,100)
+        data.b = random.randint(0,100)
+        data.op = random.choice(["plus","minus"])
+        rospy.loginfo(f"{data.op}, {data.a}, {data.b}")
+        response : AddTwoIntsResponse  = self.client.call(data) # 동기적 !! 5초 대기??
+        rospy.loginfo(f"{response.message}")
+        rospy.loginfo(f"{response.sucess}")
+        rospy.loginfo(f"{response.result}")
+        rospy.loginfo(f"--------------------")
+
+
+
+def main():
+    rospy.init_node('ServiceClient')
+    node = ServiceClient()
+    # node.send_request() # 필요한 곳에 쓴다
+    while not rospy.is_shutdown():
+        rospy.spin()
+
+if __name__ == "__main__":
+    main()
+
+
+

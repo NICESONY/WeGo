@@ -12,6 +12,7 @@ class Mpub:
     def print_hello(self, _event):
         self.msg.data = f"hello, ROS! noetic {self.i}"
         self.i += 1
+        self.i += 1
         rospy.loginfo(self.msg.data)
         self.pub_01.publish(self.msg)
     

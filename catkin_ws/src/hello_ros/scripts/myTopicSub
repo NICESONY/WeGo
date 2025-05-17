@@ -1,0 +1,29 @@
+#!/usr/bin/env python3
+
+import rospy
+from std_msgs.msg import Header
+from std_msgs.msg import String
+from hello_ros.msg import MyTopic
+
+class MyTopicSub:
+    def __init__(self):
+        self.sub = rospy.Subscriber('message', MyTopic, self.sub_callback)
+   
+    def sub_callback(self, data : MyTopic) -> None:
+        rospy.loginfo(f" name : {data.first_name}, age : {data.age}, score : {data.score}")
+
+    # question :
+
+
+
+def main():
+    rospy.init_node('MyTopicSub')
+    node = MyTopicSub()
+    while not rospy.is_shutdown():
+        rospy.spin()
+
+if __name__ == "__main__":
+    try:
+        main()
+    except rospy.ROSInterruptException:
+        pass

@@ -1,0 +1,38 @@
+#!/usr/bin/env python3
+
+import rospy
+from hello_ros.msg import MyTopic
+from std_msgs.msg import Header
+from std_msgs.msg import String
+
+class MyTopicPub:
+    def __init__(self):
+        self.pub_01 = rospy.Publisher('message', MyTopic, queue_size=10)
+        rospy.Timer(rospy.Duration(secs= 2.0), self.print_hello)
+        # self.msg = String()
+        self.data = MyTopic()
+
+
+
+    def print_hello(self, _event):
+        self.data.first_name = "gunhee"
+        self.data.age = 25
+        self.data.score = 75
+        rospy.loginfo(self.data.first_name)
+        rospy.loginfo(self.data.age)
+        rospy.loginfo(self.data.score)
+        self.pub_01.publish(self.data)
+    
+
+
+def main():
+    rospy.init_node('MyTopicPub')
+    node = MyTopicPub()
+    while not rospy.is_shutdown():
+        rospy.spin()
+
+if __name__ == "__main__":
+    try:
+        main()
+    except rospy.ROSInterruptException:
+        pass
