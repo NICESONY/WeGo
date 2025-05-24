@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<robot name="myfirst">
+    <link name = "base_link"> <!-- tf 이름-->
+        <visuial>
+            <cylinder lengtj = "0.6" radius="0.2" />
+        </visuial>
+    </link>
+</robot>
+
+<!-- 간단한 urdf 를 만들었고 rviz에 띄울 것 -->
