@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<robot name="myfirst">
+
+  <!-- base_link -->
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <cylinder length="0.6" radius="0.2"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <!-- right_leg -->
+  <link name="right_leg">
+    <visual>
+      <geometry>
+        <box size="0.6 0.2 0.2"/>
+      </geometry>
+      <origin rpy="0 1.57 0" xyz="0 0 -0.3"/>
+    </visual>
+  </link>
+
+  <!-- base_link 과 right_leg 를 고정 조인트로 연결 -->
+  <joint name="base_to_right_leg" type="fixed">
+    <parent link="base_link"/>
+    <child  link="right_leg"/>
+    <origin xyz="0 -0.22 0.25"/>
+  </joint>
+
+</robot>
+
+
+<!-- 간단한 urdf 를 만들었고 rviz에 띄울 것 -->
