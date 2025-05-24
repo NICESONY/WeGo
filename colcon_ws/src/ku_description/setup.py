@@ -18,6 +18,9 @@ setup(
         # urdf 디렉터리 안의 모든 .urdf파일을 올바른 urdf 경로로 설치
         ('share/' + package_name + '/urdf',
         glob(os.path.join('urdf', '*.urdf'))),
+        # urdf 디렉터리 안의 모든 .xacro파일을 올바른 urdf 경로로 설치
+        ('share/' + package_name + '/urdf',
+        glob(os.path.join('urdf', '*.xacro'))),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
