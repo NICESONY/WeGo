@@ -6,6 +6,9 @@ from launch.substitutions import PathJoinSubstitution  ,LaunchConfiguration
 
 # sudo apt install ros-humble-urdf-launch 설치 필수 
 ## 실행 코드 및 경로 
+# son@samson:~/WeGo_LIMO/colcon_ws/src/ku_description/urdf$ ros2 launch ku_description display.launch.py 
+
+## 실행 코드 및 경로 
 # son@samson:~/WeGo_LIMO/colcon_ws/src/ku_description/urdf$ ros2 launch ku_description display.launch.py model:=urdf/origin.urdf
 
 def generate_launch_description():
