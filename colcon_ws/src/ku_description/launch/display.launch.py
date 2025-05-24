@@ -5,11 +5,13 @@ from launch_ros.substitutions import  FindPackageShare
 from launch.substitutions import PathJoinSubstitution  ,LaunchConfiguration
 
 # sudo apt install ros-humble-urdf-launch 설치 필수 
+
 ## 실행 코드 및 경로 
 # son@samson:~/WeGo_LIMO/colcon_ws/src/ku_description/urdf$ ros2 launch ku_description display.launch.py 
 
 ## 실행 코드 및 경로 
 # son@samson:~/WeGo_LIMO/colcon_ws/src/ku_description/urdf$ ros2 launch ku_description display.launch.py model:=urdf/origin.urdf
+
 
 def generate_launch_description():
     default_model_path = PathJoinSubstitution(["urdf", "myfirst.urdf"])
@@ -33,5 +35,4 @@ def generate_launch_description():
             }.items() 
 
         )]) 
-## 여기에 무엇을 넣을지가 중요하다. 여기서 리턴되는 값이 이것으로 정해져 있다. 가장 기본적인 구조
 ## excutable == 노드의 이름 임
