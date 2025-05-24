@@ -21,8 +21,8 @@ def generate_launch_description():
           description= "myfirst urdf file" )
     return LaunchDescription([
         model,
-        Node(package = 'hello_ros2', executable = "simple_pub", output='screen'), 
-        Node(package ='hello_ros2', executable = "simple_sub", output='screen'),
+        # Node(package = 'hello_ros2', executable = "simple_pub", output='screen'), 
+        # Node(package ='hello_ros2', executable = "simple_sub", output='screen'),
         IncludeLaunchDescription(
             PathJoinSubstitution([
                 FindPackageShare("urdf_launch"), 

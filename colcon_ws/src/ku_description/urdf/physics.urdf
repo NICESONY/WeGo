@@ -20,6 +20,15 @@
             </geometry>
             <material name="blue"/>
         </visual>
+        <collision>
+            <geometry>
+                <cylinder length="0.6" radius="0.2" />
+            </geometry>
+        </collision>
+        <inertial>
+            <mass vlue="10"/>
+            <inertia ixx="1e-3" ixy="0.0" ixz="0.0" iyy="1e-3" iyz="0.0" izz="1e-3"/>
+        </inertial>
     </link>
 
     <link name="right_leg">
@@ -30,6 +39,16 @@
             <origin rpy="0 1.57 0" xyz="0 0 -0.3"/>
             <material name="white"/>
         </visual>
+        <collision>
+            <geometry>
+                <box size="0.6 0.1 0.2" />
+            </geometry>
+            <origin rpy="0 1.57 0" xyz="0 0 -0.3"/>
+        </collision>
+        <inertial>
+            <mass vlue="10"/>
+            <inertia ixx="1e-3" ixy="0.0" ixz="0.0" iyy="1e-3" iyz="0.0" izz="1e-3"/>
+        </inertial>
     </link>
 
     <link name="right_front_wheel">
@@ -40,6 +59,16 @@
             <origin rpy="1.57 0 0" xyz="0 0 0"/>
             <material name="black"/>
         </visual>
+        <collision>
+            <geometry>
+                <cylinder length="0.1" radius="0.035"/>
+            </geometry>
+            <origin rpy="1.57 0 0" xyz="0 0 0"/>
+        </collision>
+        <inertial>
+            <mass vlue="1"/>
+            <inertia ixx="1e-3" ixy="0.0" ixz="0.0" iyy="1e-3" iyz="0.0" izz="1e-3"/>
+        </inertial>
     </link>
 
     <joint name="right_front_wheel_joint" type="continuous">
@@ -63,6 +92,16 @@
             <origin rpy="0 1.57 0" xyz="0 0 -0.3"/>
             <material name="white"/>
         </visual>
+        <collision>
+            <geometry>
+                <box size="0.6 0.1 0.2" />
+            </geometry>
+            <origin rpy="0 1.57 0" xyz="0 0 -0.3"/>
+        </collision>
+        <inertial>
+            <mass vlue="10"/>
+            <inertia ixx="1e-3" ixy="0.0" ixz="0.0" iyy="1e-3" iyz="0.0" izz="1e-3"/>
+        </inertial>
     </link>
 
     <link name="left_front_wheel">
@@ -73,6 +112,16 @@
             <origin rpy="1.57 0 0" xyz="0 0 0"/>
             <material name="black"/>
         </visual>
+        <collision>
+            <geometry>
+                <cylinder length="0.1" radius="0.035"/>
+            </geometry>
+            <origin rpy="1.57 0 0" xyz="0 0 0"/>
+        </collision>
+        <inertial>
+            <mass vlue="1"/>
+            <inertia ixx="1e-3" ixy="0.0" ixz="0.0" iyy="1e-3" iyz="0.0" izz="1e-3"/>
+        </inertial>
     </link>
 
     <joint name="left_front_wheel_joint" type="continuous">
@@ -89,3 +138,12 @@
     </joint>
 
 </robot>
+<!-- 간단한 urdf 를 만들었고 rviz에 띄울 것 -->
+<!-- 질량과 관성을 넣어주기 위한 코드 colision 테그 사용한다/  visual이랑 같은 위치에 존재한다. / origin 이 있으면 같이 넣어줘야한다. 
+     질량가 관성을 확인하기 위해서는 rviz 은 안되고 gazebo에서 물체를 충돌시켜보면 알 수 있다. 
+     교제 82페이까지 길게 작성하면 괜찮으게 나온다.
+     물리값 inertial  inertia  ixx ixy ixz iy iyz izz
+     값은 보통은 1e-3 넣으면 균일한 물체처럼 작동을 한다.
+     오른쪽 다리 왼쪽 다리 전부 넣어준다. 
+     집게를 가고 활용하고 싶으면 레볼르트를 사용하면 된다.??
+     84페이지 -->

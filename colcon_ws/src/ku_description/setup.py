@@ -16,8 +16,8 @@ setup(
         ('share/' + package_name + '/launch',
          glob(os.path.join('launch', '*.launch.py'))),
         # urdf 디렉터리 안의 모든 .urdf파일을 올바른 urdf 경로로 설치
-    ('share/' + package_name + '/urdf',
-     glob(os.path.join('urdf', '*.urdf'))),
+        ('share/' + package_name + '/urdf',
+        glob(os.path.join('urdf', '*.urdf'))),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
