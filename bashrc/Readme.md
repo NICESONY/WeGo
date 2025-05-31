@@ -162,3 +162,6 @@ alias killgazebo='pkill -9 gzserver; pkill -9 gzclient; pkill -9 gzweb; pkill -9
 # mkdir src
 # cb
 # ros2 launch turtlebot3_gazebo turtlebot3_world.launch.py
+# sudo apt install ros-humble-rqt-tf-tree
+# ros2 run rqt_tf_tree rqt_tf_tree --force-discover
+# ros2 run turtlebot3_teleop teleop_keyboard
