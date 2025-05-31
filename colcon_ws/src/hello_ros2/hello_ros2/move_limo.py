@@ -3,7 +3,7 @@ from rclpy.node import Node
 from geometry_msgs.msg import Twist
 
 
-class move_turtle(Node):
+class move_turtle(Node) :
     def __init__(self) :
         super().__init__("move_limo")
         self.create_timer(0.1, self.pub_turtle)
