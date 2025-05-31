@@ -63,6 +63,7 @@ else
 fi
 unset color_prompt force_color_prompt
 
+
 # If this is an xterm set the title to user@host:dir
 case "$TERM" in
 xterm*|rxvt*)
@@ -71,6 +72,7 @@ xterm*|rxvt*)
 *)
     ;;
 esac
+
 
 # enable color support of ls and also add handy aliases
 if [ -x /usr/bin/dircolors ]; then
@@ -84,17 +86,22 @@ if [ -x /usr/bin/dircolors ]; then
     alias egrep='egrep --color=auto'
 fi
 
+
 # colored GCC warnings and errors
 #export GCC_COLORS='error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01'
+
 
 # some more ls aliases
 alias ll='ls -alF'
 alias la='ls -A'
 alias l='ls -CF'
 
+
+
 # Add an "alert" alias for long running commands.  Use like so:
 #   sleep 10; alert
 alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo error)" "$(history|tail -n1|sed -e '\''s/^\s*[0-9]\+\s*//;s/[;&|]\s*alert$//'\'')"'
+
 
 # Alias definitions.
 # You may want to put all your additions into a separate file like
@@ -119,6 +126,7 @@ fi
 source /opt/ros/humble/setup.bash 
 echo "[✔] 전역 ROS 환경이 설정되었습니다 (source /opt/ros/humble/setup.bash)"
 
+
 # ~/.bashrc 마지막 부분만 수정
 source ~/WeGo_LIMO/colcon_ws/install/setup.bash
 echo "[✔] 내 워크스페이스 환경이 설정되었습니다 (source ~/WeGo_LIMO/colcon_ws/install/setup.bash)"
@@ -129,8 +137,28 @@ alias sb="source ~/.bashrc"
 
 
 ## gazebo 빠르게 하기 위해서 작성하는 코드
-export TURTLEBOT3_MODEL = burger
+export TURTLEBOT3_MODEL=burger
 source /usr/share/gazebo/setup.bash
-export SVGA_VGPU10 = 0
+export SVGA_VGPU10=0
 ## 가제보 서버와 클라이언트가 둘 다 돌아야함, 근데 안꺼지고 남아있으면 문제가 된다. 그것을 종료하기 위한 명령어
 alias killgazebo='pkill -9 gzserver; pkill -9 gzclient; pkill -9 gzweb; pkill -9 gzbridge'
+
+
+
+# 필요한 환경 변수
+# export TURTLEBOT3_MODEL=burger
+# source /usr/share/gazebo/setup.bash
+# export SVGA_VGPU10=0
+# alias killgazebo='pkill -9 gzserver; pkill -9 gzclient; pkill -9 gzweb; pkill -9 gzbridge'
+# sudo apt install ros-humble-gazebo-*
+# sudo apt install ros-humble-turtlebot3-msgs
+# sudo apt install ros-humble-turtlebot3-teleop
+# cd ~/kuLimo/colcon_ws/src
+# git clone https://github.com/agilexrobotics/limo_ros2.git
+# git clone -b humble https://github.com/ROBOTIS-GIT/turtlebot3_simulations.git
+# cd ~/kuLimo/colcon_ws/src/limo_ros2/limo_car
+# mkdir log
+# mkdir worlds
+# mkdir src
+# cb
+# ros2 launch turtlebot3_gazebo turtlebot3_world.launch.py
