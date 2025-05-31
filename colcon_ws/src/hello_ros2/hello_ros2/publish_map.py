@@ -6,6 +6,11 @@ import rclpy
 from nav_msgs.msg import OccupancyGrid
 from rclpy.node import Node
 
+"""
+opencv 에서의 메트릭스라는 라이브러를  사용해서 진행하는 부분 질의 -> 직접해보라는 것을 추천
+해당 픽셀의 정보를 바탕으로 주위의 장애물을 확인하고 회피하도록 만들기 필요함.
+이에 코드를 실행하고 rviz2 실행 GOGO
+"""
 
 class PublishMap(Node):
     def __init__(self):
