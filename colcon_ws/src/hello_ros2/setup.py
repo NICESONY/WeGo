@@ -52,6 +52,7 @@ setup(
             "action_server = hello_ros2.action_server:main",
             "action_client = hello_ros2.action_client:main",
             "move_limo = hello_ros2.move_limo:main",
+            "publish_map = hello_ros2.publish_map:main",
         ],
     },
 )
