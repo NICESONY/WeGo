@@ -129,8 +129,8 @@ alias sb="source ~/.bashrc"
 
 
 ## gazebo 빠르게 하기 위해서 작성하는 코드
-## 가제보 서버와 클라이언트가 둘다 돌아야함, 가제보 서버는 남아있을 수 있으니까 
 export TURTLEBOT3_MODEL = burger
 source /usr/share/gazebo/setup.bash
 export SVGA_VGPU10 = 0
+## 가제보 서버와 클라이언트가 둘 다 돌아야함, 근데 안꺼지고 남아있으면 문제가 된다. 그것을 종료하기 위한 명령어
 alias killgazebo='pkill -9 gzserver; pkill -9 gzclient; pkill -9 gzweb; pkill -9 gzbridge'
