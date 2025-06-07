@@ -55,6 +55,7 @@ setup(
             "publish_map = hello_ros2.publish_map:main",
             "patrol = hello_ros2.patrol:main",
             "dynamic_tf = hello_ros2.dynamic_tf:main",
+            "tf_listener = hello_ros2.tf_listener:main",
         ],
     },
 )

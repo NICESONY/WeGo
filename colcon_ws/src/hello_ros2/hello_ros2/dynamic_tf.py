@@ -8,6 +8,7 @@ from geometry_msgs.msg import TransformStamped
 from rclpy.node import  Node
 from tf_transformations import quaternion_from_euler
 
+## tf 가 여러가지 있을때 처음부터 끝까지 한버에 바로가는 각도와 거리 아는 ㄴ법
 
 class DynamicFramePublisher(Node):
     def __init__(self):
