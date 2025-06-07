@@ -12,8 +12,8 @@ opencv 에서의 메트릭스라는 라이브러를  사용해서 진행하는 �
 이에 코드를 실행하고 rviz2 실행 GOGO
 """
 
-class PublishMap(Node):
-    def __init__(self):
+class PublishMap(Node) :
+    def __init__(self) :
         super().__init__("publish_map")  # node name
         self.create_timer(0.001, self.pub_cb)
         self.pub = self.create_publisher(OccupancyGrid, "/map", 100)
