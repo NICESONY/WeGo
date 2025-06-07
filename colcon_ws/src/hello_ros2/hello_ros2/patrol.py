@@ -24,7 +24,7 @@ class Action_client(Node):
         self.future = Future()  # 메세지가 담길 오브젝트 future
         self.get_result_future = Future()  # 초기화
         # patrol_points 의 기준이 map tf 기준!!
-        self.patrol_points = [(4.0, 0.0), (4.0, 1.0), (2.0, 2.5), (0.0, 1.0)]
+        self.patrol_points = [(-1.3, -1.1), (2.4, 0.5), (0.6, 2.6), (-1.6, -0.6)]
         self.patrol_degree = [0, 90, 180, 90]
         self.patrol_index = 0
         self.goal = FollowWaypoints.Goal()
