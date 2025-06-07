@@ -1,3 +1,6 @@
 build/
 devel/
 /home/son/WeGo_LIMO/colcon_ws/src/turtlebot3/turtlebot3_navigation2/param
+/home/son/WeGo_LIMO/colcon_ws/src/turtlebot3_simulations
+/home/son/WeGo_LIMO/colcon_ws/src/turtlebot3
+/home/son/WeGo_LIMO/colcon_ws/src/limo_ros2
