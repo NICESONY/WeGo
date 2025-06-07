@@ -57,6 +57,8 @@ setup(
             "dynamic_tf = hello_ros2.dynamic_tf:main",
             "tf_listener = hello_ros2.tf_listener:main",
             "follow_listener = hello_ros2.follow_listener:main",
+            "dynamic_tf_turtlesim = hello_ros2.dynamic_tf_turtlesim:main",
+            
         ],
     },
 )
