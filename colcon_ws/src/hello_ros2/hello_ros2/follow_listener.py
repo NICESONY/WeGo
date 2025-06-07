@@ -8,19 +8,26 @@ from geometry_msgs.msg import TransformStamped
 from rclpy.node import  Node
 from tf2_ros.transform_listener import TransformListener
 # from tf2_ros import TRansformExcption
-
+from turtlesim.srv import Spawn
 
 
 ## tf 가 여러가지 있을때 처음부터 끝까지 한버에 바로가는 각도와 거리 아는 ㄴ법
 ## 터틀심을 거북이를 열고 그녀석을 tf를 구독해ㅓ 따라가게하기
 
-class FrameListener(Node):
+class FollowTultle(Node):
     def __init__(self):
-        super().__init__("tf2_listener")
+        super().__init__("FollowTultle")
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
         self.timer = self.create_timer(0.1, self.on_timer)
         self.t = 0.0
+        self.spawer = self.create_client(Spawn, "spawn")
+        request = Spawn.Request()
+        request.x = 3.0
+        request.y = 3.0
+        request.theta = 0.0
+        self.result = self.spawer.call_async(request)
+        print("done")
 
 
     def on_timer(self):
@@ -41,7 +48,7 @@ class FrameListener(Node):
 
 def main():
     rp.init()
-    node = FrameListener()
+    node = FollowTultle()
     try :
         rp.spin(node)
     except KeyboardInterrupt :
