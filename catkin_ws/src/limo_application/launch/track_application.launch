@@ -1,0 +1,6 @@
+<launch>
+    <node pkg="limo_application" name='stop' type="stop.py"/>
+    <node pkg="limo_application" name='control' type="control.py"/>
+    <node pkg="limo_application" name='Line_detect' type="Line_detect.py"/>
+
+</launch>
