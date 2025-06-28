@@ -15,3 +15,6 @@ docker run -it --rm \
   -v /home/samson/WeGo/catkin_ws:/root/WeGo/catkin_ws \
   osrf/ros:noetic-desktop-full \
   bash
+
+
+docker exec -it limo_dev bash
