@@ -41,7 +41,7 @@
         <param name="pub_tf" type="bool" value="$(arg pub_tf)" />
     </node>
 
-    <include file="$(find robot_localization)/launch/dual_ekf_navsat_example.launch"/>
+    <!--<include file="$(find robot_localization)/launch/dual_ekf_navsat_example.launch"/> -->
     <!-- load the controllers -->
     <!-- <node name="controller_spawner" pkg="controller_manager" type="spawner"
           respawn="false" output="screen" args="limo_state_controller "/> -->
