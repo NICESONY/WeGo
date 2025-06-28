@@ -33,12 +33,12 @@
     <!-- Load joint controller configurations from YAML file to parameter server -->
     <rosparam file="$(find limo_gazebo_sim)/config/limo_four_diff_control.yaml" command="load"/>
 
-    <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="limo_state_controller limo_motor_fr_controller limo_motor_fl_controller limo_motor_rl_controller limo_motor_rr_controller" ns="$(arg robot_namespace)">
+    <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="limo_state_controller limo_motor_fr_controller limo_motor_fl_controller limo_motor_rl_controller limo_motor_rr_controller" ns="$(arg robot_namespace)"/>
         <param name="robot_namespace" type="string" value="$(arg robot_namespace)" />
-    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" ns="$(arg robot_namespace)"/>
 
     <node name="limo_skid_steer_controller" pkg="limo_gazebo_sim" type="limo_skid_steer_controller">
-        <param name="robot_namespace" type="string" value="$(arg robot_namespace)" />
+        <param name="robot_namespace" type="string" value="$(arg robot_namespace)" ns="$(arg robot_namespace)"/>
         <param name="pub_tf" type="bool" value="$(arg pub_tf)" />
     </node>
 
