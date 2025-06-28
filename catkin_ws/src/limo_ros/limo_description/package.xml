@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>limo_description</name>
+  <name>limo_description_ros</name>
   <version>0.0.0</version>
   <description>The limo_description package</description>
 
