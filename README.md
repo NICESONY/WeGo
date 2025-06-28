@@ -7,14 +7,3 @@
 ![image](https://github.com/user-attachments/assets/ecf787a4-a816-4edf-a6f6-041c44b9e89d)
 
 
-docker run -it --rm \
-  --network host \
-  -e DISPLAY=$DISPLAY \
-  -v /tmp/.X11-unix:/tmp/.X11-unix \
-  --name limo_dev \
-  -v /home/samson/WeGo/catkin_ws:/root/WeGo/catkin_ws \
-  osrf/ros:noetic-desktop-full \
-  bash
-
-
-docker exec -it limo_dev bash
