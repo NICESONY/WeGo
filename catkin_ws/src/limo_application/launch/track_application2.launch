@@ -1,6 +1,8 @@
 <launch>
     <node pkg="limo_application" name='stop' type="stop.py"/>
     <node pkg="limo_application" name='control' type="control.py"/>
-    <node pkg="limo_application" name='follow_yellow_line' type="follow_yellow_line.py"/>
+    <node pkg="limo_application" name='follow_yellow_line' type="follow_yellow_line.py">
+        <remap from="cmd_vel" to="limo/cmd_vel"/>
+    </node>
 
 </launch>

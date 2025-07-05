@@ -162,6 +162,15 @@ include_directories(
 #   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 # )
 
+catkin_install_python(PROGRAMS
+  scripts/stop.py
+  scripts/control.py
+  scripts/follow_yellow_line.py
+  scripts/Limo_control.py
+  scripts/Line_detect.py
+  scripts/turn_absolute.py
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
 ## Mark executables for installation
 ## See http://docs.ros.org/melodic/api/catkin/html/howto/format1/building_executables.html
 # install(TARGETS ${PROJECT_NAME}_node
