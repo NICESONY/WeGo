@@ -1,0 +1,106 @@
+#!/usr/bin/env python
+
+import math
+
+import actionlib
+import rospy
+from geometry_msgs.msg import Point, Pose, Quaternion
+from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
+from tf.transformations import quaternion_from_euler
+
+
+class PatrolNode:
+    def __init__(self):
+        # ROS 노드 초기화
+        rospy.init_node('patrol_node', anonymous=True)
+
+        # move_base 액션 클라이언트 생성
+        self.client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
+
+        # 액션 서버 연결 대기
+        rospy.loginfo("move_base 액션 서버 연결 대기 중...")
+        if not self.client.wait_for_server(rospy.Duration(5.0)): # type: ignore
+            rospy.logerr("move_base 액션 서버를 찾을 수 없습니다!")
+            rospy.signal_shutdown("액션 서버 연결 실패")
+            return
+
+        # 패트롤 지점과 방향 (x, y, yaw(도 단위))
+        self.patrol_points = [(0.7, 1.1, 270), (0.7, -5.0, 180), (-6.0, -5.0, 200), (-9.0, 1.0, 0)]
+        self.patrol_index = 0
+        self.is_goal_active = False  # 목표 활성화 상태 추적
+
+        # 패트롤 시작
+        self.patrol()
+
+    def go_to_pose(self, x, y, yaw_deg):
+        if self.is_goal_active:
+            rospy.logwarn("이전 목표가 아직 활성화 상태입니다. 새 목표 전송을 대기합니다.")
+            return
+
+        # MoveBaseGoal 생성
+        goal = MoveBaseGoal()
+        goal.target_pose.header.frame_id = "map"
+        goal.target_pose.header.stamp = rospy.Time.now()
+
+        # 위치 설정
+        goal.target_pose.pose.position = Point(x=x, y=y, z=0.0)
+
+        # yaw(도)를 쿼터니언으로 변환
+        yaw_rad = math.radians(yaw_deg)
+        q = quaternion_from_euler(0, 0, yaw_rad)
+        goal.target_pose.pose.orientation = Quaternion(*q)
+
+        # 목표 전송
+        rospy.loginfo(f"목표 전송: x={x}, y={y}, yaw={yaw_deg}도")
+        self.is_goal_active = True
+        self.client.send_goal(goal, done_cb=self.done_callback, feedback_cb=self.feedback_callback)
+
+    def feedback_callback(self, feedback):
+        # 피드백 로그 (디버깅용, 선택 사항)
+        # rospy.loginfo("피드백: move_base 현재 위치")
+        pass
+
+    def done_callback(self, state, result):
+        # 중복 done 콜백 방지
+        if not self.is_goal_active:
+            rospy.logwarn("비활성화된 목표에 대한 done 콜백 수신, 무시합니다.")
+            return
+
+        # 목표 성공 여부 확인
+        if state == actionlib.GoalStatus.SUCCEEDED:
+            rospy.loginfo("목표에 성공적으로 도달했습니다!")
+            self.is_goal_active = False
+            # 다음 패트롤 지점으로 이동
+            self.patrol_index += 1
+            if self.patrol_index >= len(self.patrol_points):
+                self.patrol_index = 0
+            rospy.Timer(rospy.Duration(2.0), self.timer_callback, oneshot=True) # type: ignore
+        else:
+            rospy.logwarn("목표 실패, 상태: %s" % state)
+            self.is_goal_active = False
+    def timer_callback(self, event):
+        # 타이머 콜백에서 다음 목표로 이동
+        self.patrol()
+
+    def patrol(self):
+        # 노드 종료 시 종료
+        if rospy.is_shutdown():
+            return
+
+        # 다음 패트롤 지점 가져오기
+        x, y, yaw = self.patrol_points[self.patrol_index]
+        self.go_to_pose(x, y, yaw)
+
+    def shutdown(self):
+        rospy.loginfo("패트롤 노드 종료")
+        self.client.cancel_all_goals()
+
+def main():
+    try:
+        patrol_node = PatrolNode()
+        rospy.spin()
+    except rospy.ROSInterruptException:
+        rospy.loginfo("패트롤 노드 종료됨.")
+
+if __name__ == '__main__':
+    main()
