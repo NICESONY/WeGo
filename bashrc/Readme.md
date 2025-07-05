@@ -136,7 +136,6 @@ alias sb="source ~/.bashrc"
 ## alias cb="cd ~/WeGo_LIMO/colcon_ws && colcon build"
 
 
-## gazebo 빠르게 하기 위해서 작성하는 코드
 export TURTLEBOT3_MODEL=burger
 source /usr/share/gazebo/setup.bash
 export SVGA_VGPU10=0
@@ -144,6 +143,25 @@ export SVGA_VGPU10=0
 alias killgazebo='pkill -9 gzserver; pkill -9 gzclient; pkill -9 gzweb; pkill -9 gzbridge'
 
 
+# 31번 라인
+if [[ "$TERM" == *color* ]]; then
+    color_prompt=yes
+fi
+# 맨 아래에 추가
+source /opt/ros/noetic/setup.bash # ros를 초기화.
+source ~/kuLimo/catkin_ws/devel/setup.bash
+source /usr/share/gazebo/setup.bash # gazebo를 초기화.
+export XDG_RUNTIME_DIR=/run/user/$(id -u)
+mkdir -p /run/user/$(id -u)
+chmod 700 /run/user/$(id -u)
+
+export ROS_MASTER_URL=http://localhost:11311
+export ROS_IP=$(hostname -I | awk '{print $1}')
+
+alias nb='sudo nano ~/.bashrc'
+alias sb='source ~/.bashrc'
+alias cm='cd ~/kuLimo/catkin_ws && catkin_make'
+alias killgazebo='pkill -9 gzserver; pkill -9 gzclient; pkill -9 gzweb; pkill -9 gzbridge'
 
 
 # mkdir src
