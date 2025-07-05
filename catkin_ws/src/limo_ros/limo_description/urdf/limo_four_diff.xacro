@@ -30,17 +30,16 @@
     <!-- Base link -->
     <link name="base_link">
         <visual>
-            <origin xyz="0 0 -0.15" rpy="0 0 1.57" />
+            <origin xyz="0 0 -0.07" rpy="0 0 1.57" />
             <geometry>
-                <mesh filename="package://limo_description/meshes/limo_base.dae" scale="1 1 1"/>
+                <box size="${base_x_size} ${base_y_size} ${base_z_size}"/>
             </geometry>
         </visual>
         <collision>
-            <!--origin xyz="0 0 -0.15" rpy="0 0 1.57" /-->
-            <origin xyz="0 0 0" rpy="0 0 0" />
-          <geometry>
-              <box size="${base_x_size} ${base_y_size} ${base_z_size}"/>
-          </geometry>
+            <origin xyz="0 0 -0.07" rpy="0 0 1.57" />
+            <geometry>
+                <box size="${base_x_size} ${base_y_size} ${base_z_size}"/>
+            </geometry>
         </collision>
     </link>
 

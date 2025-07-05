@@ -1,0 +1,13 @@
+material course
+{
+  technique
+  {
+    pass
+    {
+      texture_unit
+      {
+        texture course.png
+      }
+    }
+  }
+}

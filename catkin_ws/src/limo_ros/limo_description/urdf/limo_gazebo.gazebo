@@ -91,9 +91,9 @@
               <cameraName>camera_ir</cameraName>
               <imageTopicName>/limo/color/image_raw</imageTopicName>
               <cameraInfoTopicName>/limo/color/camera_info</cameraInfoTopicName>
-              <depthImageTopicName>/limo/depth/image_raw</depthImageTopicName>
+              <!--<depthImageTopicName>/limo/depth/image_raw</depthImageTopicName>
               <depthImageCameraInfoTopicName>/limo/depth/camera_info</depthImageCameraInfoTopicName>
-              <pointCloudTopicName>/limo/depth/points</pointCloudTopicName>
+              <pointCloudTopicName>/limo/depth/points</pointCloudTopicName>-->
               <frameName>depth_link</frameName>
               <cameraname>depth_camera_link</cameraname>
               
