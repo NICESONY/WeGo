@@ -113,6 +113,7 @@ catkin_install_python(PROGRAMS
   scripts/timeActionClient
   scripts/timeActionClient_unsyn
   scripts/circle_limo
+  scripts/patrol_limo
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
