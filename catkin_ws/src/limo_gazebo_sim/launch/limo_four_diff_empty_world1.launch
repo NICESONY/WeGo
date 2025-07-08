@@ -27,7 +27,7 @@
               -unpause
               -urdf
               -param robot_description
-              -model 'limo$(arg robot_namespace)'" />
+              -model '$(arg robot_namespace)'" />
 
     <!-- Load joint controller configurations from YAML file to parameter server -->
     <rosparam file="$(find limo_gazebo_sim)/config/limo_four_diff_control.yaml" command="load" ns="$(arg robot_namespace)"/>
