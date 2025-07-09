@@ -170,6 +170,9 @@ catkin_install_python(PROGRAMS
   scripts/Line_detect.py
   scripts/turn_absolute.py
   scripts/camara_test.py
+  scripts/Two_Line_detect.py
+  scripts/control_two.py
+  scripts/Two_Line_detect_v2.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 ## Mark executables for installation

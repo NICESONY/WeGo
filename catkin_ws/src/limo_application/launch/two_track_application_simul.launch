@@ -1,0 +1,24 @@
+<launch>
+
+  <!-- 비상정지 -->
+  <node pkg="limo_application" type="stop.py" name="stop" output="screen"/>
+
+  <!-- PID 제어 -->
+  <node pkg="limo_application" type="control_two.py" name="lane_controller_pid" output="screen">
+    <remap from="cmd_vel" to="limo/cmd_vel"/>
+    <!-- 필요 시 여기서 kp/ki/kd 등 수정 -->
+  </node>
+
+  <!-- 차선 검출 -->
+  <node pkg="limo_application" type="Two_Line_detect_v2.py" name="Two_Line_detect_v2" output="screen">
+    <remap from="camera/rgb/image_raw/compressed"
+            to="limo/color/image_raw/compressed"/>
+
+    <rosparam>
+      lower_yellow: [15, 80, 80]
+      upper_yellow: [35, 255, 255]
+      roi_ratio:    0.6
+    </rosparam>
+  </node>
+
+</launch>
