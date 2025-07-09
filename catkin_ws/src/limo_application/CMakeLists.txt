@@ -173,6 +173,7 @@ catkin_install_python(PROGRAMS
   scripts/Two_Line_detect.py
   scripts/control_two.py
   scripts/Two_Line_detect_v2.py
+  scripts/Line_detect_contest.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 ## Mark executables for installation
