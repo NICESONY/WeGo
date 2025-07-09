@@ -8,7 +8,7 @@
     </scene>
 
     <include>
-      <uri>model://test_map2</uri>
+      <uri>model://test_map2/course</uri>
       <pose> 0 0 0 0 0 -3.14</pose>
     </include>
 
