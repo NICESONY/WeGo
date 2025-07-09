@@ -12,11 +12,13 @@
       <pose> 0 0 0 0 0 -3.14</pose>
     </include>
 
+
+  <!-- 
     <include>
       <uri>model://turtlebot3_autorace_2020/traffic_parking</uri>
       <pose> 0.74 1.95 0.13 0 0 -1.57</pose>
     </include>
-
+    -->
 
 
     <light name='sun' type='directional'>
