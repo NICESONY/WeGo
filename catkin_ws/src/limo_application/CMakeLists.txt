@@ -169,6 +169,7 @@ catkin_install_python(PROGRAMS
   scripts/Limo_control.py
   scripts/Line_detect.py
   scripts/turn_absolute.py
+  scripts/camara_test.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 ## Mark executables for installation
