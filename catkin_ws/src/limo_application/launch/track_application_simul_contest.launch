@@ -4,7 +4,7 @@
   </node>
 
   <!-- 새 차선 검출 노드 -->
-  <node pkg="limo_application" name="line_detect_hl" type="line_detect_contest.py">
+  <node pkg="limo_application" name="line_detect_hl" type="Line_detect_contest.py">
     <remap from="camera/rgb/image_raw/compressed"
             to="limo/color/image_raw/compressed"/>
     <!-- 디버그 창을 띄우고 싶을 때 -->

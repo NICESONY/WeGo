@@ -84,7 +84,7 @@ class LineDetectHL:
 
         lines = cv2.HoughLinesP(edges, 1, math.pi/180,
                                 threshold=50, minLineLength=50, maxLineGap=20)
-        if lines is None:
+        if lines is None :
             return False, 0, 0, None
 
         # ----- 기울기·위치로 좌/우 선분 분류 -----

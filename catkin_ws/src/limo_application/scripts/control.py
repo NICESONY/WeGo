@@ -22,18 +22,18 @@ class Control:
 
     def errorCallback(self, msg):
         cmd = Twist()
-        cmd.linear.x = 0.3
+        cmd.linear.x = 0.1
 
-        cmd.angular.z = 0.1 * msg.data
+        cmd.angular.z = 0.01 * msg.data
         # cmd.angular.z = 0.1 * msg.data()
-        cmd.angular.z = min(max(-2.0, cmd.angular.z), 2.0)
+        cmd.angular.z = min(max(-0.5, cmd.angular.z), 0.5) # Limit angular velocity
 
         if self.stop_flag_:
             cmd.linear.x = 0.0
             cmd.angular.z = 0.0
         if self.rotate_flag_:
             cmd.linear.x = 0.0
-            cmd.angular.z = 0.5
+            cmd.angular.z = 0.1
         self.cmd_pub_.publish(cmd)
 
 def main():
