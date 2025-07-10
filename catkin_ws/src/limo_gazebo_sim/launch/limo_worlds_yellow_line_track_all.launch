@@ -6,7 +6,8 @@
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
     <!-- <arg name="world_name" value="$(find turtlebot3_gazebo)/worlds/turtlebot3_test_map2_track.world" /> -->
     <!-- <arg name="world_name" value="$(find limo_gazebo_sim)/worlds/willowgarage.world" /> -->
-    <arg name="world_name" value="$(find limo_gazebo_sim)/worlds/wall_map.world" />
+    <!-- <arg name="world_name" value="$(find limo_gazebo_sim)/worlds/wall_map.world" /> -->
+    <arg name="world_name" value="$(find limo_gazebo_sim)/worlds/wall_map2.world" />
     <arg name="paused" value="false"/>
     <arg name="use_sim_time" value="true"/>
     <arg name="gui" value="true"/>
