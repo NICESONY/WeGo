@@ -1,0 +1,13 @@
+yolo_model:
+
+  config_file:
+    name: infrared_yolov3.cfg
+  weight_file:
+    name: infrared_yolov3.weights
+  threshold:
+    value: 0.3
+  detection_classes:
+    names:
+      - person
+      - bicycle
+      - car

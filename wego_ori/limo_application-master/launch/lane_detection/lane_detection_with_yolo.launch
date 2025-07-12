@@ -1,0 +1,5 @@
+<?xml version="1.0"?>
+<launch>
+   <include file="$(find limo_application)/launch/lane_detection/lane_detection.launch"/>
+   <include file="$(find yolov3-ros)/launch/yolov3-tiny-traffic.launch"/>
+</launch> 

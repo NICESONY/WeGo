@@ -1,0 +1,11 @@
+yolo_model:
+
+  config_file:
+    name: apple_yolov3.cfg
+  weight_file:
+    name: apple_yolov3.weights
+  threshold:
+    value: 0.6
+  detection_classes:
+    names:
+      - Apple
