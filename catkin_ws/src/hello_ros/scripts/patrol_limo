@@ -14,14 +14,14 @@ class PatrolNode:
 
         # 1) 라치 퍼블리셔: /initialpose 메시지를 구독자가 없어도 버퍼에 저장
         self.init_pub = rospy.Publisher(
-            '/initialpose',
+            '/limo/initialpose',
             PoseWithCovarianceStamped,
             queue_size=1,
             latch=True
         )
 
         # 2) 원하는 초기 위치 지정 및 반복 전송 (AMCL이 구독 준비할 시간 확보)
-        init_x, init_y, init_yaw = 0.65, -1.7, 90.0  # 원하는 초기 위치/방향
+        init_x, init_y, init_yaw = 0.65, -1.6, 90.0  # 원하는 초기 위치/방향
         rate = rospy.Rate(5)  # 5Hz
         for _ in range(5):    # 총 1초간 5회 전송
             self.send_initial_pose(init_x, init_y, init_yaw)
@@ -37,10 +37,10 @@ class PatrolNode:
 
         # 패트롤 지점과 방향 (x, y, yaw(도 단위))
         self.patrol_points = [
-            (1.65, -1.73, 270),
-            (1.60,  0.00, 180),
-            (1.59,  1.55, 200),
-            (0.03,  1.40,   0)
+            (1.65, -1.73, 90),
+            (1.60,  0.00, 90),
+            (1.59,  1.55, 180),
+            (0.03,  1.40, 180)
         ]
         self.patrol_index   = 0
         self.is_goal_active = False
@@ -99,7 +99,7 @@ class PatrolNode:
         # 필요 시 피드백 로그를 남길 수 있습니다.
         pass
 
-    def done_callback(self, status, result):
+    def done_callback(self, status, result) :
         if not self.is_goal_active:
             rospy.logwarn("비활성화된 목표에 대한 콜백 수신, 무시합니다.")
             return
@@ -113,7 +113,7 @@ class PatrolNode:
         # 다음 지점으로 인덱스 증가 및 순환
         self.patrol_index = (self.patrol_index + 1) % len(self.patrol_points)
         # 2초 대기 후 다음 패트롤
-        rospy.Timer(rospy.Duration(2.0), self.timer_callback, oneshot=True)  # type: ignore
+        rospy.Timer(rospy.Duration(1.0), self.timer_callback, oneshot=True)  # type: ignore
 
     def timer_callback(self, event):
         self.patrol()
