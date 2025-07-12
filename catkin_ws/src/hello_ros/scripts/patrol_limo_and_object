@@ -1,0 +1,197 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+"""
+LIMO + move_base 패트롤 노드
+└─ YOLOv5로 특정 객체(class) 감지 시 정의된 행동 수행
+
+ROS1 (Melodic/Noetic) 기준 예시
+"""
+
+import math
+import actionlib
+import rospy
+import torch
+import cv2
+from geometry_msgs.msg    import Point, Quaternion, PoseWithCovarianceStamped, Twist
+from move_base_msgs.msg   import MoveBaseAction, MoveBaseGoal
+from sensor_msgs.msg      import CompressedImage
+from cv_bridge            import CvBridge
+from tf.transformations   import quaternion_from_euler
+
+
+class PatrolNode:
+    # ------------------------------------------------------------
+    def __init__(self):
+        rospy.init_node("patrol_node", anonymous=True)
+
+        # ----------------- 1. AMCL 초기 위치 설정 -----------------
+        self.init_pub = rospy.Publisher(
+            "/limo/initialpose",
+            PoseWithCovarianceStamped,
+            queue_size=1,
+            latch=True
+        )
+        self._send_initial_pose(0.65, -1.6, 90.0)
+
+        # ----------------- 2. move_base 액션 클라이언트 ----------
+        self.client = actionlib.SimpleActionClient("move_base", MoveBaseAction)
+        rospy.loginfo("move_base 액션 서버 연결 대기 중...")
+        if not self.client.wait_for_server(rospy.Duration(5.0)):   # type: ignore
+            rospy.logerr("move_base 액션 서버를 찾을 수 없습니다!")
+            rospy.signal_shutdown("액션 서버 연결 실패")
+            return
+
+        # ----------------- 3. 패트롤 경로 -------------------------
+        self.patrol_points = [
+            (1.65, -1.73, 90),
+            (1.60,  0.00, 90),
+            (1.59,  1.55, 180),
+            (0.03,  1.40, 180)
+        ]
+        self.patrol_index   = 0
+        self.is_goal_active = False
+
+        # ----------------- 4. YOLOv5 로드 & 카메라 구독 ----------
+        self.device       = "cuda" if torch.cuda.is_available() else "cpu"
+        self.target_class = rospy.get_param("~target_class", "person")
+        weight_path       = rospy.get_param("~yolov5_weight",
+                                            "/home/samneotic/WeGo/catkin_ws/src/hello_ros/yolov5/yolov5n.pt")
+
+        rospy.loginfo(f"YOLOv5 모델 로딩… ({weight_path}) [{self.device}]")
+        self.model = torch.hub.load("ultralytics/yolov5", "custom",
+                                    path=weight_path,
+                                    force_reload=False).to(self.device).eval()
+
+        self.bridge   = CvBridge()
+        cam_topic     = rospy.get_param("~camera_topic",
+                                        "/limo/camera/rgb/image_raw/compressed")
+        self.img_sub  = rospy.Subscriber(
+            cam_topic,
+            CompressedImage,
+            self._image_cb,
+            queue_size=1,
+            buff_size=2**24
+        )
+
+        # 행동 시 로봇 속도 제어용 퍼블리셔
+        self.cmd_pub = rospy.Publisher("cmd_vel", Twist, queue_size=10)
+
+        # ----------------- 5. 패트롤 시작 -------------------------
+        self._patrol()
+
+    # ============================================================
+    # -------------- AMCL 초기 위치 전송 --------------------------
+    def _send_initial_pose(self, x, y, yaw_deg):
+        rate = rospy.Rate(5)  # 5 Hz → 1 초간 반복
+        for _ in range(5):
+            msg = PoseWithCovarianceStamped()
+            msg.header.stamp    = rospy.Time.now()
+            msg.header.frame_id = "map"
+            msg.pose.pose.position.x = x
+            msg.pose.pose.position.y = y
+            q = quaternion_from_euler(0, 0, math.radians(yaw_deg))
+            msg.pose.pose.orientation = Quaternion(*q)
+            msg.pose.covariance = [0.01] * 36
+            self.init_pub.publish(msg)
+            rate.sleep()
+        rospy.loginfo(f"초기 포즈 전송 완료: ({x:.2f}, {y:.2f}, {yaw_deg}°)")
+
+    # ============================================================
+    # -------------- move_base 목표 전송 --------------------------
+    def _go_to_pose(self, x, y, yaw_deg):
+        if self.is_goal_active:
+            rospy.logwarn("이전 목표가 아직 활성화 상태입니다.")
+            return
+
+        goal = MoveBaseGoal()
+        goal.target_pose.header.frame_id = "map"
+        goal.target_pose.header.stamp    = rospy.Time.now()
+        goal.target_pose.pose.position   = Point(x=x, y=y, z=0.0)
+        q = quaternion_from_euler(0, 0, math.radians(yaw_deg))
+        goal.target_pose.pose.orientation = Quaternion(*q)
+
+        rospy.loginfo(f"목표 전송: ({x:.2f}, {y:.2f}, {yaw_deg}°)")
+        self.is_goal_active = True
+        self.client.send_goal(goal,
+                              done_cb     = self._done_cb,
+                              feedback_cb = self._fb_cb)
+
+    # done 콜백 → 목표 달성 후 다음 지점 예약
+    def _done_cb(self, status, _result):
+        if not self.is_goal_active:
+            return
+        self.is_goal_active = False
+        if status == actionlib.GoalStatus.SUCCEEDED:
+            rospy.loginfo("목표 지점 도착")
+        else:
+            rospy.logwarn(f"목표 실패 (status={status})")
+
+        # 다음 지점으로 이동
+        self.patrol_index = (self.patrol_index + 1) % len(self.patrol_points)
+        # 1 초 뒤 패트롤 재개
+        rospy.Timer(rospy.Duration(1.0),
+                    self._timer_cb,
+                    oneshot=True)
+
+    def _fb_cb(self, _feedback):
+        pass  # 필요 시 거리/각도 등 출력
+
+    def _timer_cb(self, _event):
+        self._patrol()
+
+    def _patrol(self):
+        if rospy.is_shutdown():
+            return
+        x, y, yaw = self.patrol_points[self.patrol_index]
+        self._go_to_pose(x, y, yaw)
+
+    # ============================================================
+    # -------------- 카메라 콜백 & YOLO 추론 ----------------------
+    def _image_cb(self, msg):
+        try:
+            img = self.bridge.compressed_imgmsg_to_cv2(msg, "bgr8")
+        except cv2.error as e:
+            rospy.logerr(f"cv_bridge 변환 실패: {e}")
+            return
+
+        results = self.model(img, size=640)        # (n,6) tensor
+        names   = results.names
+        if self.target_class not in names:
+            return
+        cls_id  = names.index(self.target_class)
+        det     = results.xyxy[0]
+        if (det[:, 5] == cls_id).any():
+            self._handle_detection()
+
+    # 객체 감지 시 호출되는 행동 함수 -------------------------------
+    def _handle_detection(self):
+        rospy.loginfo(f"[YOLO] '{self.target_class}' 감지 – 로봇 정지 & 목표 취소")
+        # 1) 즉시 정지
+        self.cmd_pub.publish(Twist())               # 선속·각속 0
+        # 2) 현재 goal 취소
+        if self.is_goal_active:
+            self.client.cancel_goal()
+            self.is_goal_active = False
+        # 3) 5 초 대기 후 다음 패트롤
+        rospy.Timer(rospy.Duration(5.0),
+                    self._timer_cb,
+                    oneshot=True)
+
+    # ============================================================
+    # -------------- 노드 종료 처리 -------------------------------
+    def shutdown(self):
+        rospy.loginfo("패트롤 노드 종료…")
+        self.cmd_pub.publish(Twist())               # 완전 정지
+        self.client.cancel_all_goals()
+
+
+# ----------------------------------------------------------------
+def main():
+    node = PatrolNode()
+    rospy.on_shutdown(node.shutdown)
+    rospy.spin()
+
+
+if __name__ == "__main__":
+    main()
