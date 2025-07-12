@@ -10,8 +10,8 @@
 
 	<node pkg="amcl" type="amcl" name="amcl" output="screen">
 		<rosparam file="$(find limo_bringup)/param/amcl_params_diff.yaml" command="load" />
-		<param name="initial_pose_x" value="0"/>
-		<param name="initial_pose_y" value="0"/>
+		<param name="initial_pose_x" value="0.65"/>
+		<param name="initial_pose_y" value="-1.7"/>
 		<param name="initial_pose_a" value="0"/>
 		<remap from="scan" to="/limo/scan"/>
 		<remap from="odom" to="/limo/odom"/>
