@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<launch>
+	<arg name="pub_image" default="/infrared_camera/image_raw" />
+	<node name="infrared_camera" pkg="vision" type="infrared_camera.py" output="screen">
+		<remap from="/infrared_camera/image_raw"  to="$(arg pub_image)" />
+	</node>
+</launch>
+

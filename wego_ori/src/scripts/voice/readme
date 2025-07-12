@@ -1,0 +1,12 @@
+1.record
+arecord -D plughw:2,0 -f S16_LE -r 48000 -c 2 test.wav
+
+2.play
+aplay -D hw:2,0 test.wav 
+
+3.wav to map3
+lame test.wav test.mp3
+
+4..语音听写流式
+cd ~/Audio_Card_for_jetson_nano/iat
+python3 iat.py

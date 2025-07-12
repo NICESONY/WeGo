@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<launch>
+	<arg name="object_class" default="car/person" />
+	<arg name="object_frame" default="car/person" />
+	<arg name="car_frame" default="base_link" />
+	<arg name="fx" default="604.7211303710938" />
+	<arg name="fy" default="603.2431640625" />
+	<arg name="sub_inf" default="/infrared_camera/image_raw" />
+	<arg name="pub_image" default="/infrared_located/image_raw" />
+	<arg name="sub_boxes" default="/infrared/darknet_ros/bounding_boxes" />
+
+	<node name="infrared_located" pkg="vision" type="infrared_located" output="screen">
+		<param name="object_class" value="$(arg object_class)" />
+		<param name="object_frame" value="$(arg object_frame)" />
+		<param name="car_frame" value="$(arg car_frame)" />
+		<param name="fx" value="$(arg fx)" />
+		<param name="fy" value="$(arg fy)" />
+		<remap from="/infrared_camera/image_raw"  to="$(arg sub_inf)" />
+		<remap from="/infrared_located/image_raw"  to="$(arg pub_image)" />
+		<remap from="/darknet_ros/bounding_boxes"  to="$(arg sub_boxes)" />
+	</node>
+</launch>
+

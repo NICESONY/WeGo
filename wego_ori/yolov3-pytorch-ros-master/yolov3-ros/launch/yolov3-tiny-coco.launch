@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<launch>
+    <node pkg="usb_cam" type="usb_cam_node" name="usb_cam" output="log">
+        <param name="pixel_format" type="string" value="yuyv" /> 
+        <param name="video_device" type="string" value="/dev/video0" /> 
+    </node>
+
+    <arg name="color_path" default="$(find yolov3-ros)/src/colors" />
+    <arg name="weight_path" default="$(find yolov3-ros)/src/weights" />
+    <arg name="config_path" default="$(find yolov3-ros)/src/cfg" />
+    <arg name="class_path" default="$(find yolov3-ros)/src/data" />
+
+    <arg name="weight_name" default="yolov3-tiny.weights" />
+    <arg name="config_name" default="yolov3-tiny.cfg" />
+    <arg name="class_name" default="coco.names" />
+
+    <node pkg="yolov3-ros" type="yolov3_ros.py" name="yolov3_node" output="screen">
+        <param name="model_path" type="string" value="$(arg config_path)/$(arg config_name)" />
+        <param name="weight_path" type="string" value="$(arg weight_path)/$(arg weight_name)" />
+        <param name="class_path" type="string" value="$(arg class_path)/$(arg class_name)" />
+        <param name="color_path" type="string" value="$(arg color_path)" />
+        <remap from="image" to="/usb_cam/image_raw/compressed"/>
+    </node>
+</launch>
