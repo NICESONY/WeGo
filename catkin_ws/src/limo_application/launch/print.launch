@@ -1,0 +1,14 @@
+<launch>
+  <!-- 1) Gazebo & world -->
+  <include file="$(find limo_gazebo_sim)/launch/limo_worlds_yellow_line_track_all.launch" />
+
+  <!-- 2) Bringup -->
+  <include file="$(find limo_bringup)/launch/limo_navigation_diff_sim.launch" />
+
+
+  <!-- 4) 라인 감지/제어 -->
+  <!-- <include file="$(find limo_application)/launch/track_application_simul_contest.launch" /> -->
+
+  <!-- 5) 모드 매니저 -->
+  <!-- <node pkg="hello_ros" type="mode_manager_simple" name="mode_manager" output="screen" /> -->
+</launch>
