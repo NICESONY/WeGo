@@ -11,22 +11,19 @@ from tf.transformations import quaternion_from_euler
 from actionlib_msgs.msg import GoalStatus
 
 
-class PatrolNode:
+class PatrolLimo(object):
     def __init__(self):
-        rospy.init_node('patrol_node', anonymous=True)
+        rospy.init_node('patrol_limo', anonymous=True)
 
-        # ========= 파라미터 =========
-        # 초기 pose
-        self.init_x = rospy.get_param('~init_x', 0.65)
-        self.init_y = rospy.get_param('~init_y', -1.6)
-        self.init_yaw_deg = rospy.get_param('~init_yaw', 90.0)
+        # ---------- 파라미터 ----------
+        self.init_x        = rospy.get_param('~init_x', 0.65)
+        self.init_y        = rospy.get_param('~init_y', -1.6)
+        self.init_yaw_deg  = rospy.get_param('~init_yaw', 90.0)
 
-        # 목표 재시도 / 타임아웃
-        self.max_retries   = rospy.get_param('~max_retries', 2)      # 각 waypoint 실패 허용 재시도
-        self.goal_timeout  = rospy.get_param('~goal_timeout', 60.0)  # 초 단위
+        self.max_retries   = rospy.get_param('~max_retries', 2)
+        self.goal_timeout  = rospy.get_param('~goal_timeout', 60.0)
         self.final_stop_publish = rospy.get_param('~final_stop_publish', True)
 
-        # 패트롤 포인트 (x, y, yaw_deg)
         self.patrol_points = rospy.get_param(
             '~patrol_points',
             [
@@ -36,47 +33,33 @@ class PatrolNode:
                 [0.03,  1.40, 180]
             ]
         )
-        # 리스트 요소를 튜플로
         self.patrol_points = [tuple(p) for p in self.patrol_points]
 
-        # ========= 퍼블리셔 =========
-        self.init_pub = rospy.Publisher(
-            '/limo/initialpose',
-            PoseWithCovarianceStamped,
-            queue_size=1,
-            latch=True
-        )
+        # ---------- 퍼블리셔 ----------
+        self.init_pub = rospy.Publisher('/limo/initialpose',
+                                        PoseWithCovarianceStamped,
+                                        queue_size=1, latch=True)
+        self.patrol_done_pub = rospy.Publisher('/patrol_done',
+                                               Bool, queue_size=1, latch=True)
+        self.nav_cmd_pub = rospy.Publisher('/cmd_vel_nav',
+                                           Twist, queue_size=1)
 
-        self.patrol_done_pub = rospy.Publisher(
-            '/patrol_done',
-            Bool,
-            queue_size=1,
-            latch=True
-        )
+        # ---------- 상태 ----------
+        self.patrol_index    = 0
+        self.is_goal_active  = False
+        self.patrol_finished = False
+        self.current_retries = 0
+        self.goal_start_time = None
 
-        # (선택) 네비게이션 속도 정지용
-        self.nav_cmd_pub = rospy.Publisher(
-            '/cmd_vel_nav',
-            Twist,
-            queue_size=1
-        )
+        # ---------- 초기 Pose 다회 전송 ----------
+        self.publish_initial_pose(times=5, hz=5)
 
-        # ========= 상태 변수 =========
-        self.patrol_index     = 0
-        self.is_goal_active   = False
-        self.patrol_finished  = False
-        self.current_retries  = 0
-        self.goal_start_time  = None
-
-        # ========= 초기 pose 다중 전송 =========
-        self.send_initial_pose_multiple(times=5, hz=5)
-
-        # ========= move_base 액션 클라이언트 =========
+        # ---------- move_base 연결 ----------
         self.client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
-        rospy.loginfo("move_base 액션 서버 연결 대기 중...")
+        rospy.loginfo("move_base 서버 대기...")
         if not self.client.wait_for_server(rospy.Duration(10.0)):
-            rospy.logerr("move_base 액션 서버 연결 실패 - 종료")
-            rospy.signal_shutdown("move_base 연결 실패")
+            rospy.logerr("move_base 연결 실패 → 종료")
+            rospy.signal_shutdown("move_base not available")
             return
         rospy.loginfo("move_base 연결 성공")
 
@@ -86,12 +69,12 @@ class PatrolNode:
         # 첫 목표 전송
         self.send_next_goal()
 
-    # ---------- 초기 pose 관련 ----------
-    def send_initial_pose_multiple(self, times=5, hz=5):
-        rate = rospy.Rate(hz)
+    # ---------- 초기 포즈 ----------
+    def publish_initial_pose(self, times=5, hz=5):
+        r = rospy.Rate(hz)
         for _ in range(times):
             self.send_initial_pose(self.init_x, self.init_y, self.init_yaw_deg)
-            rate.sleep()
+            r.sleep()
 
     def send_initial_pose(self, x, y, yaw_deg):
         msg = PoseWithCovarianceStamped()
@@ -105,87 +88,80 @@ class PatrolNode:
         q = quaternion_from_euler(0, 0, math.radians(yaw_deg))
         msg.pose.pose.orientation = Quaternion(*q)
 
-        # 간단한 공분산 (필요시 조정)
         msg.pose.covariance = [0.0]*36
-        msg.pose.covariance[0]  = 0.01  # x
-        msg.pose.covariance[7]  = 0.01  # y
-        msg.pose.covariance[35] = 0.05  # yaw
+        msg.pose.covariance[0]  = 0.01
+        msg.pose.covariance[7]  = 0.01
+        msg.pose.covariance[35] = 0.05
 
-        rospy.loginfo("초기 포즈 전송 → x=%.2f, y=%.2f, yaw=%.1f°", x, y, yaw_deg)
+        rospy.loginfo("초기 포즈 → x=%.2f y=%.2f yaw=%.1f°", x, y, yaw_deg)
         self.init_pub.publish(msg)
 
-    # ---------- goal 전송 ----------
+    # ---------- Goal 생성/전송 ----------
     def make_goal(self, x, y, yaw_deg):
-        goal = MoveBaseGoal()
-        goal.target_pose.header.frame_id = 'map'
-        goal.target_pose.header.stamp = rospy.Time.now()
-        goal.target_pose.pose.position = Point(x=x, y=y, z=0.0)
+        g = MoveBaseGoal()
+        g.target_pose.header.frame_id = 'map'
+        g.target_pose.header.stamp = rospy.Time.now()
+        g.target_pose.pose.position = Point(x=x, y=y, z=0.0)
         q = quaternion_from_euler(0, 0, math.radians(yaw_deg))
-        goal.target_pose.pose.orientation = Quaternion(*q)
-        return goal
+        g.target_pose.pose.orientation = Quaternion(*q)
+        return g
 
     def send_next_goal(self):
         if self.patrol_finished:
             return
 
         if self.patrol_index >= len(self.patrol_points):
-            # 모든 waypoint 완료
             self.finalize_patrol("ALL_WAYPOINTS_DONE")
             return
 
         x, y, yaw = self.patrol_points[self.patrol_index]
         goal = self.make_goal(x, y, yaw)
 
-        rospy.loginfo("[패트롤] 목표 #%d 전송: (x=%.2f, y=%.2f, yaw=%.1f°)", self.patrol_index, x, y, yaw)
+        rospy.loginfo("[Patrol] Goal #%d 전송: x=%.2f y=%.2f yaw=%.1f°",
+                      self.patrol_index, x, y, yaw)
         self.is_goal_active = True
         self.current_retries = 0
         self.goal_start_time = rospy.Time.now()
 
-        self.client.send_goal(
-            goal,
-            done_cb=self.done_cb,
-            feedback_cb=self.feedback_cb
-        )
+        self.client.send_goal(goal,
+                              done_cb=self.done_cb,
+                              feedback_cb=self.feedback_cb)
 
-    # ---------- 액션 콜백 ----------
+    # ---------- 콜백 ----------
     def feedback_cb(self, fb):
-        # 필요하면 위치/거리 계산 추가
-        pass
+        pass  # 필요 시 추가
 
     def done_cb(self, status, result):
         if self.patrol_finished:
             return
         if not self.is_goal_active:
-            rospy.logwarn("비활성 goal 콜백 수신 - 무시")
+            rospy.logwarn("비활성 goal 콜백 수신 → 무시")
             return
 
         self.is_goal_active = False
         status_name = GoalStatus.to_string(status) if hasattr(GoalStatus, 'to_string') else str(status)
-        rospy.loginfo("[패트롤] Goal #%d 결과: status=%s(%d)", self.patrol_index, status_name, status)
+        rospy.loginfo("[Patrol] Goal #%d 결과: %s (%d)",
+                      self.patrol_index, status_name, status)
 
         if status == GoalStatus.SUCCEEDED:
-            # 다음 waypoint
             self.patrol_index += 1
-            # 약간 쉰 다음 전송
-            rospy.Timer(rospy.Duration(0.5), self._next_timer_cb, oneshot=True)
+            rospy.Timer(rospy.Duration(0.5), self._next_goal_timer, oneshot=True)
         else:
-            # 실패 처리
             if self.current_retries < self.max_retries:
                 self.current_retries += 1
-                rospy.logwarn("[패트롤] Goal #%d 실패 → 재시도 %d/%d", self.patrol_index, self.current_retries, self.max_retries)
+                rospy.logwarn("[Patrol] Goal #%d 실패 → 재시도 %d/%d",
+                              self.patrol_index, self.current_retries, self.max_retries)
                 self.resend_current_goal(delay=1.0)
             else:
-                rospy.logerr("[패트롤] Goal #%d 재시도 초과 → 패트롤 종료(부분 완료)", self.patrol_index)
+                rospy.logerr("[Patrol] Goal #%d 재시도 초과 → 종료",
+                             self.patrol_index)
                 self.finalize_patrol("FAILED_GOAL_%d" % self.patrol_index)
 
-    def _next_timer_cb(self, evt):
+    def _next_goal_timer(self, evt):
         self.send_next_goal()
 
     def resend_current_goal(self, delay=0.5):
         if self.patrol_finished:
-            return
-        if self.patrol_index >= len(self.patrol_points):
-            self.finalize_patrol("INDEX_OVER")
             return
         rospy.Timer(rospy.Duration(delay), self._resend_cb, oneshot=True)
 
@@ -194,37 +170,34 @@ class PatrolNode:
             return
         x, y, yaw = self.patrol_points[self.patrol_index]
         goal = self.make_goal(x, y, yaw)
-        rospy.loginfo("[패트롤] Goal #%d 재전송 (재시도 %d/%d)", self.patrol_index, self.current_retries, self.max_retries)
+        rospy.loginfo("[Patrol] Goal #%d 재전송 (retry %d/%d)",
+                      self.patrol_index, self.current_retries, self.max_retries)
         self.is_goal_active = True
         self.goal_start_time = rospy.Time.now()
-        self.client.send_goal(
-            goal,
-            done_cb=self.done_cb,
-            feedback_cb=self.feedback_cb
-        )
+        self.client.send_goal(goal,
+                              done_cb=self.done_cb,
+                              feedback_cb=self.feedback_cb)
 
-    # ---------- 타임아웃 체크 ----------
+    # ---------- 타임아웃 ----------
     def timeout_check_timer(self, evt):
-        if self.patrol_finished:
-            return
-        if not self.is_goal_active:
+        if self.patrol_finished or not self.is_goal_active:
             return
         if self.goal_start_time is None:
             return
-
         elapsed = (rospy.Time.now() - self.goal_start_time).to_sec()
         if elapsed > self.goal_timeout:
-            rospy.logwarn("[패트롤] Goal #%d 타임아웃 (%.1fs > %.1fs) → cancel", self.patrol_index, elapsed, self.goal_timeout)
+            rospy.logwarn("[Patrol] Goal #%d 타임아웃 (%.1fs > %.1fs) → cancel",
+                          self.patrol_index, elapsed, self.goal_timeout)
             self.client.cancel_goal()
-            # cancel 후 done_cb 에서 status (PREEMPTED / ABORTED 등) 들어와 재시도/종료 처리
+            # 이후 done_cb 로 실패 처리 흐름
 
-    # ---------- 종료 처리 ----------
+    # ---------- 종료 ----------
     def finalize_patrol(self, reason):
         if self.patrol_finished:
             return
         self.patrol_finished = True
+        rospy.logwarn("[Patrol] 종료: %s", reason)
 
-        rospy.logwarn("[패트롤] 종료: %s", reason)
         try:
             self.client.cancel_all_goals()
         except Exception:
@@ -232,18 +205,16 @@ class PatrolNode:
 
         if self.final_stop_publish:
             stop = Twist()
-            # 정지 명령 두어 번 퍼블리시 (버퍼/지연 대비)
             for _ in range(3):
                 self.nav_cmd_pub.publish(stop)
                 rospy.sleep(0.05)
 
-        # Line 모드 전환 트리거
         self.patrol_done_pub.publish(Bool(data=True))
-        rospy.loginfo("[패트롤] /patrol_done True 퍼블리시 완료 (Line Mode 전환 기대)")
+        rospy.loginfo("[Patrol] /patrol_done True 퍼블리시 → 라인 모드 전환 기대")
 
     # ---------- 종료 훅 ----------
     def shutdown(self):
-        rospy.loginfo("패트롤 노드 종료 중...")
+        rospy.loginfo("patrol_limo 종료 중...")
         try:
             self.client.cancel_all_goals()
         except Exception:
@@ -253,7 +224,7 @@ class PatrolNode:
 
 
 def main():
-    node = PatrolNode()
+    node = PatrolLimo()
     rospy.on_shutdown(node.shutdown)
     rospy.spin()
 
