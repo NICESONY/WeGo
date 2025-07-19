@@ -1,21 +1,29 @@
 <launch>
-  <!-- Gazebo & world -->
+  <!-- 1) Gazebo & world -->
   <include file="$(find limo_gazebo_sim)/launch/limo_worlds_yellow_line_track_all.launch" />
-  <!-- Bringup (센서 / TF 등) -->
+
+  <!-- 2) Bringup -->
   <include file="$(find limo_bringup)/launch/limo_navigation_diff_sim.launch" />
 
-  <!-- 순찰: /cmd_vel -> /cmd_vel_nav -->
-  <node pkg="hello_ros" type="patrol_limo.py" name="patrol_limo" output="screen">
-    <remap from="/cmd_vel" to="/cmd_vel_nav"/>
-    <param name="goal_timeout" value="50.0" />
-    <param name="max_retries" value="2" />
-    <param name="final_stop_publish" value="true" />
-    <param name="patrol_points" value="[[1.65,-1.73,90],[1.60,0.0,90],[1.59,1.55,90],[0.03,1.40,180]]"/>
+  <!-- 3) 순찰 노드 -->
+  <node pkg="hello_ros" type="patrol_limo" name="patrol_limo" output="screen" required="true">
+    <remap from="/cmd_vel" to="/limo/cmd_vel"/>
+    <param name="goal_timeout" value="60.0"/>
+    <param name="max_retries" value="2"/>
+    <param name="final_stop_publish" value="true"/>
+
+    <!-- ✅ Waypoints: YAML 형태 -->
+    <rosparam param="patrol_points">
+    - [1.65, -1.73, 90]
+    - [1.60,  0.00, 90]
+    - [1.59,  1.55, 90]
+    - [0.03,  1.40, 180]
+    </rosparam>
   </node>
 
-  <!-- 라인 감지/제어 (이 launch 안에서 world 재기동 X) -->
+  <!-- 4) 라인 감지/제어 -->
   <include file="$(find limo_application)/launch/track_application_simul_contest.launch" />
 
-  <!-- 모드 매니저 -->
-  <node pkg="mode_manager" type="mode_manager.py" name="mode_manager" output="screen" />
+  <!-- 5) 모드 매니저 -->
+  <node pkg="hello_ros" type="mode_manager_simple" name="mode_manager" output="screen" />
 </launch>

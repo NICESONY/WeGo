@@ -1,7 +1,7 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import math
+import math, ast
 import actionlib
 import rospy
 from geometry_msgs.msg import Point, Quaternion, PoseWithCovarianceStamped, Twist
@@ -24,7 +24,7 @@ class PatrolLimo(object):
         self.goal_timeout  = rospy.get_param('~goal_timeout', 60.0)
         self.final_stop_publish = rospy.get_param('~final_stop_publish', True)
 
-        self.patrol_points = rospy.get_param(
+        raw_pts = rospy.get_param(
             '~patrol_points',
             [
                 [1.65, -1.73, 90],
@@ -33,10 +33,35 @@ class PatrolLimo(object):
                 [0.03,  1.40, 180]
             ]
         )
-        self.patrol_points = [tuple(p) for p in self.patrol_points]
+
+        # --- 문자열로 들어온 경우 파싱 ---
+        if isinstance(raw_pts, str):
+            try:
+                raw_pts = ast.literal_eval(raw_pts)
+                rospy.logwarn("patrol_points 문자열을 ast.literal_eval 로 파싱했습니다.")
+            except Exception as e:
+                rospy.logerr("patrol_points 파싱 실패: %s", e)
+                raw_pts = []
+
+        clean = []
+        for i, p in enumerate(raw_pts):
+            if isinstance(p, (list, tuple)) and len(p) == 3:
+                try:
+                    clean.append((float(p[0]), float(p[1]), float(p[2])))
+                except Exception:
+                    rospy.logwarn("waypoint #%d 형 변환 실패: %s", i, p)
+            else:
+                rospy.logwarn("waypoint #%d 형식 오류: %s", i, p)
+
+        if not clean:
+            rospy.logerr("유효한 patrol_points 없음 → 노드 종료")
+            return
+
+        self.patrol_points = clean
+        rospy.loginfo("적용된 waypoints (%d개): %s", len(self.patrol_points), self.patrol_points)
 
         # ---------- 퍼블리셔 ----------
-        self.init_pub = rospy.Publisher('/limo/initialpose',
+        self.init_pub = rospy.Publisher('/limo/initialpose',  # AMCL이 일반적으로 구독
                                         PoseWithCovarianceStamped,
                                         queue_size=1, latch=True)
         self.patrol_done_pub = rospy.Publisher('/patrol_done',
@@ -56,10 +81,10 @@ class PatrolLimo(object):
 
         # ---------- move_base 연결 ----------
         self.client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
-        rospy.loginfo("move_base 서버 대기...")
-        if not self.client.wait_for_server(rospy.Duration(10.0)):
-            rospy.logerr("move_base 연결 실패 → 종료")
-            rospy.signal_shutdown("move_base not available")
+        total_timeout = 30.0
+        rospy.loginfo("move_base 서버 대기 (%.1fs)", total_timeout)
+        if not self.client.wait_for_server(rospy.Duration(total_timeout)):
+            rospy.logerr("move_base 연결 실패 (%.1fs) - 종료", total_timeout)
             return
         rospy.loginfo("move_base 연결 성공")
 
@@ -126,10 +151,11 @@ class PatrolLimo(object):
         self.client.send_goal(goal,
                               done_cb=self.done_cb,
                               feedback_cb=self.feedback_cb)
+        rospy.loginfo("DEBUG goal #%d send_goal 호출 완료", self.patrol_index)
 
     # ---------- 콜백 ----------
     def feedback_cb(self, fb):
-        pass  # 필요 시 추가
+        pass
 
     def done_cb(self, status, result):
         if self.patrol_finished:
@@ -189,7 +215,6 @@ class PatrolLimo(object):
             rospy.logwarn("[Patrol] Goal #%d 타임아웃 (%.1fs > %.1fs) → cancel",
                           self.patrol_index, elapsed, self.goal_timeout)
             self.client.cancel_goal()
-            # 이후 done_cb 로 실패 처리 흐름
 
     # ---------- 종료 ----------
     def finalize_patrol(self, reason):
@@ -210,7 +235,7 @@ class PatrolLimo(object):
                 rospy.sleep(0.05)
 
         self.patrol_done_pub.publish(Bool(data=True))
-        rospy.loginfo("[Patrol] /patrol_done True 퍼블리시 → 라인 모드 전환 기대")
+        rospy.loginfo("[Patrol] /patrol_done True 퍼블리시 (라인 모드 전환 예상)")
 
     # ---------- 종료 훅 ----------
     def shutdown(self):

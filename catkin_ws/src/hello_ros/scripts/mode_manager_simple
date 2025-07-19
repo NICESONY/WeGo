@@ -15,7 +15,7 @@ class ModeManager(object):
         rospy.Subscriber('/patrol_done', Bool,  self.patrol_done_cb, queue_size=1)
 
         # 최종 cmd_vel + 상태 퍼블리셔
-        self.pub_cmd   = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
+        self.pub_cmd   = rospy.Publisher('/limo/cmd_vel', Twist, queue_size=10)
         self.pub_state = rospy.Publisher('/mode_manager/state', String, queue_size=1, latch=True)
 
         self.publish_state()
