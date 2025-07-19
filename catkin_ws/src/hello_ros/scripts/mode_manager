@@ -1,0 +1,137 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+import rospy, math, numpy as np
+from sensor_msgs.msg import LaserScan
+from geometry_msgs.msg import Twist
+from std_msgs.msg import String
+
+class ModeManager(object):
+    def __init__(self):
+        # 파라미터
+        self.baseline_collect_duration = rospy.get_param('~baseline_collect_duration', 8.0)
+        self.sector_left_deg  = rospy.get_param('~sector_left_deg',  [70.0, 110.0])
+        self.sector_right_deg = rospy.get_param('~sector_right_deg', [-110.0, -70.0])
+        self.delta_ratio      = rospy.get_param('~delta_ratio', 0.25)
+        self.delta_abs_min    = rospy.get_param('~delta_abs_min', 0.20)
+        self.open_threshold   = rospy.get_param('~open_threshold', 1.6)
+        self.deviation_hold_time = rospy.get_param('~deviation_hold_time', 5.0)
+        self.ema_alpha        = rospy.get_param('~ema_alpha', 0.3)
+
+        self.state = 'SLAM_PATROL'
+        self.start_time = rospy.get_time()
+        self.collect_finished = False
+
+        self.baseline_left  = None
+        self.baseline_right = None
+        self.filtered_left  = None
+        self.filtered_right = None
+        self.deviation_start_time = None
+
+        rospy.Subscriber('/scan', LaserScan, self.scan_cb, queue_size=1)
+        rospy.Subscriber('/cmd_vel_nav',  Twist, self.nav_cb, queue_size=1)
+        rospy.Subscriber('/cmd_vel_line', Twist, self.line_cb, queue_size=1)
+
+        self.pub_cmd   = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
+        self.pub_state = rospy.Publisher('/mode_manager/state', String, queue_size=1, latch=True)
+
+        rospy.Timer(rospy.Duration(1.0), self.timer_state)
+        rospy.loginfo('[mode_manager] Started. State=SLAM_PATROL')
+
+    def sector_median(self, scan, deg_range):
+        d0, d1 = deg_range
+        a_min = scan.angle_min
+        inc   = scan.angle_increment
+        def d2i(d):
+            rad = math.radians(d)
+            idx = int((rad - a_min)/inc)
+            return max(0, min(idx, len(scan.ranges)-1))
+        i0, i1 = d2i(d0), d2i(d1)
+        if i1 < i0: i0,i1 = i1,i0
+        rmin, rmax = scan.range_min, scan.range_max
+        vals = [r for r in scan.ranges[i0:i1+1] if rmin < r < rmax]
+        if not vals: return float('inf')
+        return float(np.median(vals))
+
+    def scan_cb(self, scan):
+        left_raw  = self.sector_median(scan, self.sector_left_deg)
+        right_raw = self.sector_median(scan, self.sector_right_deg)
+
+        if self.filtered_left is None:
+            self.filtered_left, self.filtered_right = left_raw, right_raw
+        else:
+            a = self.ema_alpha
+            self.filtered_left  = a*left_raw  + (1-a)*self.filtered_left
+            self.filtered_right = a*right_raw + (1-a)*self.filtered_right
+
+        now = rospy.get_time()
+        # Baseline 수집
+        if not self.collect_finished:
+            if (now - self.start_time) < self.baseline_collect_duration:
+                if self.baseline_left is None:
+                    self.baseline_left  = self.filtered_left
+                    self.baseline_right = self.filtered_right
+                else:
+                    self.baseline_left  = 0.9*self.baseline_left  + 0.1*self.filtered_left
+                    self.baseline_right = 0.9*self.baseline_right + 0.1*self.filtered_right
+            else:
+                self.collect_finished = True
+                rospy.loginfo('[mode_manager] Baseline L=%.3f R=%.3f',
+                              self.baseline_left, self.baseline_right)
+
+        # 전환 판정 (SLAM_PATROL 상태일 때)
+        if self.state == 'SLAM_PATROL' and self.collect_finished:
+            dev_left  = abs(self.filtered_left  - self.baseline_left)
+            dev_right = abs(self.filtered_right - self.baseline_right)
+            delta_left  = max(self.delta_abs_min, self.baseline_left  * self.delta_ratio)
+            delta_right = max(self.delta_abs_min, self.baseline_right * self.delta_ratio)
+
+            cond_A = (dev_left > delta_left) or (dev_right > delta_right)   # 벽 거리 급변
+            cond_B = (self.filtered_left > self.open_threshold and
+                      self.filtered_right > self.open_threshold)            # 양쪽 개방
+            deviation_active = cond_A or cond_B
+
+            if deviation_active:
+                if self.deviation_start_time is None:
+                    self.deviation_start_time = now
+                elif (now - self.deviation_start_time) >= self.deviation_hold_time:
+                    self.switch_to_line("hold %.1fs A=%s B=%s" %
+                                        (now - self.deviation_start_time, cond_A, cond_B))
+            else:
+                self.deviation_start_time = None
+
+    def nav_cb(self, msg):
+        if self.state == 'SLAM_PATROL':
+            self.pub_cmd.publish(msg)
+
+    def line_cb(self, msg):
+        if self.state == 'LINE_MODE':
+            self.pub_cmd.publish(msg)
+
+    def switch_to_line(self, reason=''):
+        if self.state != 'LINE_MODE':
+            rospy.logwarn('[mode_manager] SWITCH SLAM_PATROL -> LINE_MODE : %s', reason)
+            self.state = 'LINE_MODE'
+            self.deviation_start_time = None
+            self.publish_state()
+
+    # (필요하면 복귀 로직 추가용)
+    def switch_to_slam(self, reason=''):
+        if self.state != 'SLAM_PATROL':
+            rospy.logwarn('[mode_manager] SWITCH LINE_MODE -> SLAM_PATROL : %s', reason)
+            self.state = 'SLAM_PATROL'
+            self.deviation_start_time = None
+            self.publish_state()
+
+    def timer_state(self, evt):
+        self.publish_state()
+
+    def publish_state(self):
+        self.pub_state.publish(String(self.state))
+
+def main():
+    rospy.init_node('mode_manager')
+    ModeManager()
+    rospy.spin()
+
+if __name__ == '__main__':
+    main()

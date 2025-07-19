@@ -1,0 +1,49 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+import rospy
+from geometry_msgs.msg import Twist
+from std_msgs.msg import String, Bool
+
+class ModeManager(object):
+    def __init__(self):
+        self.state = 'SLAM_PATROL'   # 처음엔 SLAM 순찰
+        rospy.loginfo('[mode_manager] Start: SLAM_PATROL')
+
+        # 구독: 순찰 cmd_vel, 라인 cmd_vel, 순찰 종료 신호
+        rospy.Subscriber('/cmd_vel_nav',  Twist, self.nav_cb,  queue_size=10)
+        rospy.Subscriber('/cmd_vel_line', Twist, self.line_cb, queue_size=10)
+        rospy.Subscriber('/patrol_done', Bool,  self.patrol_done_cb, queue_size=1)
+
+        # 최종 cmd_vel + 상태 퍼블리셔
+        self.pub_cmd   = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
+        self.pub_state = rospy.Publisher('/mode_manager/state', String, queue_size=1, latch=True)
+
+        self.publish_state()
+
+    def publish_state(self):
+        self.pub_state.publish(String(self.state))
+
+    def patrol_done_cb(self, msg):
+        if msg.data and self.state != 'LINE_MODE':
+            rospy.logwarn('[mode_manager] patrol_done → LINE_MODE 전환')
+            self.state = 'LINE_MODE'
+            self.publish_state()
+            # (안전) nav 정지 한번 (선택)
+            stop = Twist()
+            self.pub_cmd.publish(stop)
+
+    def nav_cb(self, msg):
+        if self.state == 'SLAM_PATROL':
+            self.pub_cmd.publish(msg)
+
+    def line_cb(self, msg):
+        if self.state == 'LINE_MODE':
+            self.pub_cmd.publish(msg)
+
+def main():
+    rospy.init_node('mode_manager')
+    ModeManager()
+    rospy.spin()
+
+if __name__ == '__main__':
+    main()

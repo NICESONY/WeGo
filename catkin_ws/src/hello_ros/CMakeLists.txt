@@ -115,6 +115,8 @@ catkin_install_python(PROGRAMS
   scripts/circle_limo
   scripts/patrol_limo
   scripts/patrol_limo_and_object
+  scripts/mode_manager
+  scripts/mode_manager_simple
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

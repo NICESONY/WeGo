@@ -7,7 +7,8 @@ from std_msgs.msg import Bool, Int16
 
 class Control:
     def __init__(self):
-        self.cmd_pub_ = rospy.Publisher('cmd_vel', Twist, queue_size=10)
+        # self.cmd_pub_ = rospy.Publisher('cmd_vel', Twist, queue_size=10)
+        self.cmd_pub_ = rospy.Publisher('cmd_vel_line', Twist, queue_size=10)
         self.error_sub_ = rospy.Subscriber('gap', Int16, self.errorCallback)
         self.stop_sub_ = rospy.Subscriber('stop', Bool, self.stopCallback)
         self.rotate_sub_ = rospy.Subscriber('rotate', Bool, self.rotateCallback)

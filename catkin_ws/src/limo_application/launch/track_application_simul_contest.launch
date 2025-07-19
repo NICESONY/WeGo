@@ -8,6 +8,6 @@
     <remap from="camera/rgb/image_raw/compressed"
             to="limo/color/image_raw/compressed"/>
     <!-- 디버그 창을 띄우고 싶을 때 -->
-    <param name="debug" value="true" />
+    <param name="debug" value="true" /> 
   </node>
 </launch>
