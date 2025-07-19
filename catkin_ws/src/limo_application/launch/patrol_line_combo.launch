@@ -1,26 +1,21 @@
 <launch>
-  <!-- 1) 월드 + Gazebo + 센서 bringup -->
+  <!-- Gazebo & world -->
   <include file="$(find limo_gazebo_sim)/launch/limo_worlds_yellow_line_track_all.launch" />
+  <!-- Bringup (센서 / TF 등) -->
   <include file="$(find limo_bringup)/launch/limo_navigation_diff_sim.launch" />
 
-  <!-- 2) SLAM 순찰 노드 (patrol_limo) : cmd_vel remap -->
-  <node pkg="hello_ros" type="patrol_limo" name="patrol_limo" output="screen">
+  <!-- 순찰: /cmd_vel -> /cmd_vel_nav -->
+  <node pkg="hello_ros" type="patrol_limo.py" name="patrol_limo" output="screen">
     <remap from="/cmd_vel" to="/cmd_vel_nav"/>
+    <param name="goal_timeout" value="50.0" />
+    <param name="max_retries" value="2" />
+    <param name="final_stop_publish" value="true" />
+    <param name="patrol_points" value="[[1.65,-1.73,90],[1.60,0.0,90],[1.59,1.55,90],[0.03,1.40,180]]"/>
   </node>
 
-  <!-- 3) 라인 감지/제어 (track_application_simul_contest.launch 내용 중 월드 재생성 제외) -->
-  <!-- 가장 간단: 기존 launch 전체 include 후 world 중복이 있다면 기존 launch를 복사해서 world 부분 제거한 별도 파일 사용 -->
-  <include file="$(find limo_application)/launch/track_application_simul_contest.launch">
-    <!-- 내부에서 control.py 가 /cmd_vel_line publish 하도록 이미 수정했다고 가정 -->
-  </include>
+  <!-- 라인 감지/제어 (이 launch 안에서 world 재기동 X) -->
+  <include file="$(find limo_application)/launch/track_application_simul_contest.launch" />
 
-  <!-- 4) 모드 매니저 -->
-  <node pkg="hello_ros" type="mode_manager.py" name="mode_manager" output="screen">
-    <param name="baseline_collect_duration" value="8.0" />
-    <param name="open_threshold" value="1.6" />
-    <param name="deviation_hold_time" value="5.0" />
-    <param name="delta_ratio" value="0.25" />
-    <param name="delta_abs_min" value="0.2" />
-    <param name="ema_alpha" value="0.3" />
-  </node>
+  <!-- 모드 매니저 -->
+  <node pkg="mode_manager" type="mode_manager.py" name="mode_manager" output="screen" />
 </launch>
