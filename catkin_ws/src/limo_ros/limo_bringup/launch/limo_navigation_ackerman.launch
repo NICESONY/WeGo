@@ -9,10 +9,16 @@
 
 	<node pkg="amcl" type="amcl" name="amcl" output="screen">
         <rosparam file="$(find limo_bringup)/param/amcl_params_diff.yaml" command="load" />
-	    <param name="initial_pose_x"            value="0"/>
-		<param name="initial_pose_y"            value="0"/>
-		<param name="initial_pose_a"            value="0"/>
+		<param name="initial_pose_x" value = "0.0"/>
+		<param name="initial_pose_y" value = "-0.8"/>
+		<param name="initial_pose_a" value = "1.5"/>
 	</node>
+
+
+	<node pkg="map_server" type="map_server" name="map_server" output="screen" args="$(find limo_bringup)/maps/map.yaml">
+		<param name="frame_id" value="map"/>
+	</node> 
+
 
     <!--  ************** Navigation ***************  -->
 	<node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">

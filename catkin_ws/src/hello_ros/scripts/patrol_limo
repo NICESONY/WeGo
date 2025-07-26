@@ -20,7 +20,7 @@ class PatrolLimo(object):
         self.init_yaw_deg  = rospy.get_param('init_yaw', 0.0)
 
         self.max_retries   = rospy.get_param('max_retries', 2)
-        self.goal_timeout  = rospy.get_param('goal_timeout', 4.0)
+        self.goal_timeout  = rospy.get_param('goal_timeout', 10.0)
         self.final_stop_publish = rospy.get_param('final_stop_publish', True)
 
         raw_pts = rospy.get_param(
