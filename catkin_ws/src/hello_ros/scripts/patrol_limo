@@ -6,7 +6,6 @@ import actionlib
 import rospy
 from geometry_msgs.msg import Point, Quaternion, PoseWithCovarianceStamped, Twist
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
-from std_msgs.msg import Bool
 from tf.transformations import quaternion_from_euler
 from actionlib_msgs.msg import GoalStatus
 
@@ -16,22 +15,23 @@ class PatrolLimo(object):
         rospy.init_node('patrol_limo', anonymous=True)
 
         # ---------- 파라미터 ----------
-        self.init_x        = rospy.get_param('~init_x', 0.65)
-        self.init_y        = rospy.get_param('~init_y', -1.6)
-        self.init_yaw_deg  = rospy.get_param('~init_yaw', 90.0)
+        self.init_x        = rospy.get_param('init_x', 0.0)
+        self.init_y        = rospy.get_param('init_y', 0.0)
+        self.init_yaw_deg  = rospy.get_param('init_yaw', 0.0)
 
-        self.max_retries   = rospy.get_param('~max_retries', 2)
-        self.goal_timeout  = rospy.get_param('~goal_timeout', 60.0)
-        self.final_stop_publish = rospy.get_param('~final_stop_publish', True)
+        self.max_retries   = rospy.get_param('max_retries', 2)
+        self.goal_timeout  = rospy.get_param('goal_timeout', 4.0)
+        self.final_stop_publish = rospy.get_param('final_stop_publish', True)
 
         raw_pts = rospy.get_param(
-            '~patrol_points',
+                'patrol_points',
             [
-                [1.65, -1.73, 90],
-                [1.60,  0.00, 90],
-                [1.59,  1.55, 90],
-                [0.03,  1.40, 180]
-            ]
+            [-3.45,  0.31, 0],
+            [-2.60,  3.82, 270],
+            [ 1.03,  5.19, 270],
+            [ 4.31,  3.55, 180],
+            [ 0.12, -0.12, 90]
+        ]
         )
 
         # --- 문자열로 들어온 경우 파싱 ---
@@ -43,6 +43,7 @@ class PatrolLimo(object):
                 rospy.logerr("patrol_points 파싱 실패: %s", e)
                 raw_pts = []
 
+        # 좌표 정리
         clean = []
         for i, p in enumerate(raw_pts):
             if isinstance(p, (list, tuple)) and len(p) == 3:
@@ -61,18 +62,17 @@ class PatrolLimo(object):
         rospy.loginfo("적용된 waypoints (%d개): %s", len(self.patrol_points), self.patrol_points)
 
         # ---------- 퍼블리셔 ----------
-        self.init_pub = rospy.Publisher('/limo/initialpose',  # AMCL이 일반적으로 구독
-                                        PoseWithCovarianceStamped,
-                                        queue_size=1, latch=True)
-        self.patrol_done_pub = rospy.Publisher('/patrol_done',
-                                               Bool, queue_size=1, latch=True)
-        self.nav_cmd_pub = rospy.Publisher('/cmd_vel_nav',
-                                           Twist, queue_size=1)
+        self.init_pub = rospy.Publisher(
+            '/limo/initialpose',
+            PoseWithCovarianceStamped,
+            queue_size=1, latch=True)
+        self.nav_cmd_pub = rospy.Publisher(
+            '/cmd_vel_nav',
+            Twist, queue_size=1)
 
         # ---------- 상태 ----------
         self.patrol_index    = 0
         self.is_goal_active  = False
-        self.patrol_finished = False
         self.current_retries = 0
         self.goal_start_time = None
 
@@ -81,10 +81,8 @@ class PatrolLimo(object):
 
         # ---------- move_base 연결 ----------
         self.client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
-        total_timeout = 30.0
-        rospy.loginfo("move_base 서버 대기 (%.1fs)", total_timeout)
-        if not self.client.wait_for_server(rospy.Duration(total_timeout)):
-            rospy.logerr("move_base 연결 실패 (%.1fs) - 종료", total_timeout)
+        if not self.client.wait_for_server(rospy.Duration(30.0)):
+            rospy.logerr("move_base 연결 실패 - 종료")
             return
         rospy.loginfo("move_base 연결 성공")
 
@@ -105,19 +103,13 @@ class PatrolLimo(object):
         msg = PoseWithCovarianceStamped()
         msg.header.stamp = rospy.Time.now()
         msg.header.frame_id = 'map'
-
         msg.pose.pose.position.x = x
         msg.pose.pose.position.y = y
-        msg.pose.pose.position.z = 0.0
-
-        q = quaternion_from_euler(0, 0, math.radians(yaw_deg))
-        msg.pose.pose.orientation = Quaternion(*q)
-
+        msg.pose.pose.orientation = Quaternion(*quaternion_from_euler(0, 0, math.radians(yaw_deg)))
         msg.pose.covariance = [0.0]*36
         msg.pose.covariance[0]  = 0.01
         msg.pose.covariance[7]  = 0.01
         msg.pose.covariance[35] = 0.05
-
         rospy.loginfo("초기 포즈 → x=%.2f y=%.2f yaw=%.1f°", x, y, yaw_deg)
         self.init_pub.publish(msg)
 
@@ -127,17 +119,14 @@ class PatrolLimo(object):
         g.target_pose.header.frame_id = 'map'
         g.target_pose.header.stamp = rospy.Time.now()
         g.target_pose.pose.position = Point(x=x, y=y, z=0.0)
-        q = quaternion_from_euler(0, 0, math.radians(yaw_deg))
-        g.target_pose.pose.orientation = Quaternion(*q)
+        g.target_pose.pose.orientation = Quaternion(*quaternion_from_euler(0, 0, math.radians(yaw_deg)))
         return g
 
     def send_next_goal(self):
-        if self.patrol_finished:
-            return
-
+        # patrol_index가 범위를 넘어가면 0으로 리셋해서 반복
         if self.patrol_index >= len(self.patrol_points):
-            self.finalize_patrol("ALL_WAYPOINTS_DONE")
-            return
+            rospy.loginfo("[Patrol] 순찰 완료 → 처음부터 반복")
+            self.patrol_index = 0
 
         x, y, yaw = self.patrol_points[self.patrol_index]
         goal = self.make_goal(x, y, yaw)
@@ -147,52 +136,36 @@ class PatrolLimo(object):
         self.is_goal_active = True
         self.current_retries = 0
         self.goal_start_time = rospy.Time.now()
-
-        self.client.send_goal(goal,
-                              done_cb=self.done_cb,
-                              feedback_cb=self.feedback_cb)
-        rospy.loginfo("DEBUG goal #%d send_goal 호출 완료", self.patrol_index)
+        self.client.send_goal(goal, done_cb=self.done_cb)
+        rospy.loginfo("DEBUG goal #%d send", self.patrol_index)
 
     # ---------- 콜백 ----------
-    def feedback_cb(self, fb):
-        pass
-
     def done_cb(self, status, result):
-        if self.patrol_finished:
-            return
         if not self.is_goal_active:
-            rospy.logwarn("비활성 goal 콜백 수신 → 무시")
             return
 
         self.is_goal_active = False
-        status_name = GoalStatus.to_string(status) if hasattr(GoalStatus, 'to_string') else str(status)
-        rospy.loginfo("[Patrol] Goal #%d 결과: %s (%d)",
-                      self.patrol_index, status_name, status)
+        name = GoalStatus.to_string(status) if hasattr(GoalStatus, 'to_string') else str(status)
+        rospy.loginfo("[Patrol] Goal #%d 결과: %s", self.patrol_index, name)
 
         if status == GoalStatus.SUCCEEDED:
             self.patrol_index += 1
-            rospy.Timer(rospy.Duration(0.5), self._next_goal_timer, oneshot=True)
+            rospy.Timer(rospy.Duration(0.5), lambda evt: self.send_next_goal(), oneshot=True)
         else:
             if self.current_retries < self.max_retries:
                 self.current_retries += 1
                 rospy.logwarn("[Patrol] Goal #%d 실패 → 재시도 %d/%d",
                               self.patrol_index, self.current_retries, self.max_retries)
-                self.resend_current_goal(delay=1.0)
+                rospy.Timer(rospy.Duration(1.0),
+                            lambda evt: self.resend_current_goal(), oneshot=True)
             else:
-                rospy.logerr("[Patrol] Goal #%d 재시도 초과 → 종료",
-                             self.patrol_index)
-                self.finalize_patrol("FAILED_GOAL_%d" % self.patrol_index)
+                rospy.logerr("[Patrol] Goal #%d 재시도 초과 → 다음 목표로 이동", self.patrol_index)
+                self.patrol_index += 1
+                rospy.Timer(rospy.Duration(0.5),
+                            lambda evt: self.send_next_goal(), oneshot=True)
 
-    def _next_goal_timer(self, evt):
-        self.send_next_goal()
-
-    def resend_current_goal(self, delay=0.5):
-        if self.patrol_finished:
-            return
-        rospy.Timer(rospy.Duration(delay), self._resend_cb, oneshot=True)
-
-    def _resend_cb(self, evt):
-        if self.patrol_finished:
+    def resend_current_goal(self):
+        if self.is_goal_active:
             return
         x, y, yaw = self.patrol_points[self.patrol_index]
         goal = self.make_goal(x, y, yaw)
@@ -200,42 +173,17 @@ class PatrolLimo(object):
                       self.patrol_index, self.current_retries, self.max_retries)
         self.is_goal_active = True
         self.goal_start_time = rospy.Time.now()
-        self.client.send_goal(goal,
-                              done_cb=self.done_cb,
-                              feedback_cb=self.feedback_cb)
+        self.client.send_goal(goal, done_cb=self.done_cb)
 
     # ---------- 타임아웃 ----------
     def timeout_check_timer(self, evt):
-        if self.patrol_finished or not self.is_goal_active:
-            return
-        if self.goal_start_time is None:
+        if not self.is_goal_active or self.goal_start_time is None:
             return
         elapsed = (rospy.Time.now() - self.goal_start_time).to_sec()
         if elapsed > self.goal_timeout:
             rospy.logwarn("[Patrol] Goal #%d 타임아웃 (%.1fs > %.1fs) → cancel",
                           self.patrol_index, elapsed, self.goal_timeout)
             self.client.cancel_goal()
-
-    # ---------- 종료 ----------
-    def finalize_patrol(self, reason):
-        if self.patrol_finished:
-            return
-        self.patrol_finished = True
-        rospy.logwarn("[Patrol] 종료: %s", reason)
-
-        try:
-            self.client.cancel_all_goals()
-        except Exception:
-            pass
-
-        if self.final_stop_publish:
-            stop = Twist()
-            for _ in range(3):
-                self.nav_cmd_pub.publish(stop)
-                rospy.sleep(0.05)
-
-        self.patrol_done_pub.publish(Bool(data=True))
-        rospy.loginfo("[Patrol] /patrol_done True 퍼블리시 (라인 모드 전환 예상)")
 
     # ---------- 종료 훅 ----------
     def shutdown(self):
@@ -244,15 +192,11 @@ class PatrolLimo(object):
             self.client.cancel_all_goals()
         except Exception:
             pass
-        if not self.patrol_finished:
-            self.finalize_patrol("NODE_SHUTDOWN")
-
 
 def main():
     node = PatrolLimo()
     rospy.on_shutdown(node.shutdown)
     rospy.spin()
-
 
 if __name__ == '__main__':
     main()
