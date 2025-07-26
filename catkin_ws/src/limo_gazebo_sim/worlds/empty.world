@@ -9,11 +9,6 @@
     <include>
       <uri>model://ground_plane</uri>
     </include>
-    <!-- man people-->
-    <include>
-      <uri>model://MaleVisitor</uri>
-       <pose>1.0 -1.5 0 0 0 1.57</pose>
-    </include>
 
 
     <physics type='ode'>

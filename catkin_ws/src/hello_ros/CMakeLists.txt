@@ -114,6 +114,7 @@ catkin_install_python(PROGRAMS
   scripts/timeActionClient_unsyn
   scripts/circle_limo
   scripts/patrol_limo
+  scripts/patrol_limo_ori
   scripts/patrol_limo_and_object
   scripts/mode_manager
   scripts/mode_manager_simple

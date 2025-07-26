@@ -1,0 +1,146 @@
+#!/usr/bin/env python
+
+import math
+import actionlib
+import rospy
+from geometry_msgs.msg import Point, Quaternion, PoseWithCovarianceStamped
+from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
+from tf.transformations import quaternion_from_euler
+
+class PatrolNode:
+    def __init__(self):
+        # ROS 노드 초기화
+        rospy.init_node('patrol_node', anonymous=True)
+
+        # 1) 라치 퍼블리셔: /initialpose 메시지를 구독자가 없어도 버퍼에 저장
+        self.init_pub = rospy.Publisher(
+            '/limo/initialpose',
+            PoseWithCovarianceStamped,
+            queue_size=1,
+            latch=True
+        )
+
+        # 2) 원하는 초기 위치 지정 및 반복 전송 (AMCL이 구독 준비할 시간 확보)
+        init_x, init_y, init_yaw = 0.0, 0.0, 0.0  # 원하는 초기 위치/방향
+        rate = rospy.Rate(5)  # 5Hz
+        for _ in range(5):    # 총 1초간 5회 전송
+            self.send_initial_pose(init_x, init_y, init_yaw)
+            rate.sleep()
+
+        # move_base 액션 클라이언트 생성 및 연결 대기
+        self.client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
+        rospy.loginfo("move_base 액션 서버 연결 대기 중...")
+        if not self.client.wait_for_server(rospy.Duration(5.0)):  # type: ignore
+            rospy.logerr("move_base 액션 서버를 찾을 수 없습니다!")
+            rospy.signal_shutdown("액션 서버 연결 실패")
+            return
+
+        # 패트롤 지점과 방향 (x, y, yaw(도 단위))
+        # self.patrol_points = [
+        #     (1.65, -1.73, 90),
+        #     (1.60,  0.00, 90),
+        #     (1.59,  1.55, 180),
+        #     (0.03,  1.40, 180)
+        # ]
+        self.patrol_points = [
+            (3.17,  3.00,  0),
+            (4.93,  0.82,  270),
+            (6.14, -1.72,  200),
+            (3.44, -5.33,  90),
+            (0.14,  0.04,  0),
+        ]
+
+
+        self.patrol_index   = 0
+        self.is_goal_active = False
+
+        # 패트롤 시작
+        self.patrol()
+
+    def send_initial_pose(self, x, y, yaw_deg):
+        msg = PoseWithCovarianceStamped()
+        msg.header.stamp    = rospy.Time.now()
+        msg.header.frame_id = 'map'
+
+        # 위치 설정
+        msg.pose.pose.position.x = x
+        msg.pose.pose.position.y = y
+        msg.pose.pose.position.z = 0.0
+
+        # 방향 설정 (Euler → Quaternion)
+        yaw_rad = math.radians(yaw_deg)
+        q = quaternion_from_euler(0, 0, yaw_rad)
+        msg.pose.pose.orientation = Quaternion(*q)
+
+        # 공분산 (36개 값). 필요에 따라 조정하세요.
+        # 여기서는 작은 불확실도 예시로 0.01 사용
+        msg.pose.covariance = [0.01] * 36
+
+        rospy.loginfo(f"초기 포즈 전송 → x={x}, y={y}, yaw={yaw_deg}°")
+        self.init_pub.publish(msg)
+
+    def go_to_pose(self, x, y, yaw_deg):
+        if self.is_goal_active:
+            rospy.logwarn("이전 목표가 아직 활성화 상태입니다. 대기합니다.")
+            return
+
+        goal = MoveBaseGoal()
+        goal.target_pose.header.frame_id = 'map'
+        goal.target_pose.header.stamp    = rospy.Time.now()
+
+        # 위치
+        goal.target_pose.pose.position = Point(x=x, y=y, z=0.0)
+
+        # 방향
+        yaw_rad = math.radians(yaw_deg)
+        q = quaternion_from_euler(0, 0, yaw_rad)
+        goal.target_pose.pose.orientation = Quaternion(*q)
+
+        rospy.loginfo(f"목표 전송 → x={x}, y={y}, yaw={yaw_deg}°")
+        self.is_goal_active = True
+        self.client.send_goal(
+            goal,
+            done_cb     = self.done_callback,
+            feedback_cb = self.feedback_callback
+        )
+
+    def feedback_callback(self, feedback):
+        # 필요 시 피드백 로그를 남길 수 있습니다.
+        pass
+
+    def done_callback(self, status, result) :
+        if not self.is_goal_active:
+            rospy.logwarn("비활성화된 목표에 대한 콜백 수신, 무시합니다.")
+            return
+
+        if status == actionlib.GoalStatus.SUCCEEDED:
+            rospy.loginfo("목표에 성공적으로 도달했습니다!")
+        else:
+            rospy.logwarn(f"목표 달성 실패 (상태 코드: {status})")
+
+        self.is_goal_active = False
+        # 다음 지점으로 인덱스 증가 및 순환
+        self.patrol_index = (self.patrol_index + 1) % len(self.patrol_points)
+        # 2초 대기 후 다음 패트롤
+        rospy.Timer(rospy.Duration(1.0), self.timer_callback, oneshot=True)  # type: ignore
+
+    def timer_callback(self, event):
+        self.patrol()
+
+    def patrol(self):
+        if rospy.is_shutdown():
+            return
+        x, y, yaw = self.patrol_points[self.patrol_index]
+        self.go_to_pose(x, y, yaw)
+
+    def shutdown(self):
+        rospy.loginfo("패트롤 노드 종료 중...")
+        self.client.cancel_all_goals()
+
+def main():
+    node = PatrolNode()
+    rospy.on_shutdown(node.shutdown)
+    rospy.spin()
+
+if __name__ == '__main__':
+    main()
