@@ -1,0 +1,427 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import math, ast, random
+import actionlib
+import rospy
+from geometry_msgs.msg import Point, Quaternion, PoseWithCovarianceStamped, Twist, PoseStamped
+from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
+from tf.transformations import quaternion_from_euler
+from actionlib_msgs.msg import GoalStatus
+from nav_msgs.msg import OccupancyGrid
+from nav_msgs.srv import GetPlan, GetPlanRequest
+from std_msgs.msg import String, Int32
+
+
+class PatrolLimo(object):
+    MODE_RANDOM = "random"
+    MODE_PATROL = "patrol"
+
+    def __init__(self):
+        rospy.init_node('patrol_limo', anonymous=True)
+
+        # ---------- 기본 파라미터 ----------
+        self.init_x        = rospy.get_param('~init_x', 0.0)
+        self.init_y        = rospy.get_param('~init_y', 0.0)
+        self.init_yaw_deg  = rospy.get_param('~init_yaw', 0.0)
+
+        self.max_retries   = rospy.get_param('~max_retries', 2)
+        self.goal_timeout  = rospy.get_param('~goal_timeout', 10.0)
+        self.final_stop_publish = rospy.get_param('~final_stop_publish', True)
+
+        # ---------- 랜덤 순찰 파라미터 ----------
+        self.random_mode_default = rospy.get_param('~random_mode', True)  # 시작 모드
+        self.random_use_map     = rospy.get_param('~random_use_map', True)
+        self.random_min_dist    = rospy.get_param('~random_min_dist', 1.0)
+        self.random_max_tries   = rospy.get_param('~random_max_tries', 60)
+        self.random_yaw_any     = rospy.get_param('~random_yaw_any', True)
+        self.map_topic          = rospy.get_param('~map_topic', '/map')
+        self.make_plan_srv_name = rospy.get_param('~make_plan_srv', '/move_base/make_plan')
+
+        # 맵 없을 때 fallback 범위
+        self.random_x_range     = rospy.get_param('~random_x_range', [-5.0, 5.0])
+        self.random_y_range     = rospy.get_param('~random_y_range', [-5.0, 5.0])
+
+        # ---------- 음성/모드 제어 ----------
+        self.voice_topic        = rospy.get_param('~voice_topic', '/voice')
+        self.voice_type         = rospy.get_param('~voice_type', 'string')  # 'string' or 'int'
+        # String용 키워드
+        self.cmd_patrol_keywords = set(rospy.get_param('~cmd_patrol_keywords', ['patrol','순찰','경로','모드2']))
+        self.cmd_random_keywords = set(rospy.get_param('~cmd_random_keywords', ['random','랜덤','자유','모드1']))
+        self.cmd_stop_keywords   = set(rospy.get_param('~cmd_stop_keywords', ['stop','정지','스탑']))
+        # Int32용 값
+        self.cmd_patrol_int = int(rospy.get_param('~cmd_patrol_int', 2))
+        self.cmd_random_int = int(rospy.get_param('~cmd_random_int', 1))
+        self.cmd_stop_int   = int(rospy.get_param('~cmd_stop_int', 0))
+
+        raw_pts = rospy.get_param('~patrol_points',
+            [
+                [-3.45,  0.31, 0],
+                [-2.60,  3.82, 270],
+                [ 1.03,  5.19, 270],
+                [ 4.31,  3.55, 180],
+                [ 0.12, -0.12, 90]
+            ]
+        )
+
+        # --- 문자열로 들어온 경우 파싱 ---
+        if isinstance(raw_pts, str):
+            try:
+                raw_pts = ast.literal_eval(raw_pts)
+                rospy.logwarn("patrol_points 문자열을 ast.literal_eval 로 파싱했습니다.")
+            except Exception as e:
+                rospy.logerr("patrol_points 파싱 실패: %s", e)
+                raw_pts = []
+
+        # 좌표 정리
+        clean = []
+        for i, p in enumerate(raw_pts):
+            if isinstance(p, (list, tuple)) and len(p) == 3:
+                try:
+                    clean.append((float(p[0]), float(p[1]), float(p[2])))
+                except Exception:
+                    rospy.logwarn("waypoint #%d 형 변환 실패: %s", i, p)
+            else:
+                rospy.logwarn("waypoint #%d 형식 오류: %s", i, p)
+
+        self.patrol_points = clean
+        if not self.random_mode_default and not self.patrol_points:
+            rospy.logerr("랜덤 모드가 아니고 유효한 patrol_points 도 없음 → 노드 종료")
+            return
+
+        rospy.loginfo("적용된 waypoints (%d개): %s", len(self.patrol_points), self.patrol_points)
+        rospy.loginfo("시작 모드: %s", "랜덤" if self.random_mode_default else "웨이포인트")
+
+        # ---------- 퍼블리셔 ----------
+        self.init_pub = rospy.Publisher('/limo/initialpose', PoseWithCovarianceStamped, queue_size=1, latch=True)
+        self.nav_cmd_pub = rospy.Publisher('/cmd_vel_nav', Twist, queue_size=1)
+
+        # ---------- 구독자 ----------
+        self.map_sub = rospy.Subscriber(self.map_topic, OccupancyGrid, self.map_cb, queue_size=1)
+        self.amcl_sub = rospy.Subscriber('/amcl_pose', PoseWithCovarianceStamped, self.amcl_cb, queue_size=1)
+        if self.voice_type.lower() == 'string':
+            self.voice_sub = rospy.Subscriber(self.voice_topic, String, self.voice_cb_str, queue_size=5)
+            rospy.loginfo("음성 제어 구독(String): %s", self.voice_topic)
+        else:
+            self.voice_sub = rospy.Subscriber(self.voice_topic, Int32, self.voice_cb_int, queue_size=5)
+            rospy.loginfo("음성 제어 구독(Int32): %s", self.voice_topic)
+
+        # ---------- 상태 ----------
+        self.mode             = self.MODE_RANDOM if self.random_mode_default else self.MODE_PATROL
+        self.patrol_index     = 0
+        self.is_goal_active   = False
+        self.current_retries  = 0
+        self.goal_start_time  = None
+
+        self.map_grid = None  # (grid, width, height, res, ox, oy)
+        self.last_amcl = None
+
+        # ---------- 초기 Pose 다회 전송 ----------
+        self.publish_initial_pose(times=5, hz=5)
+
+        # ---------- move_base 연결 ----------
+        self.client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
+        if not self.client.wait_for_server(rospy.Duration(30.0)):
+            rospy.logerr("move_base 연결 실패 - 종료")
+            return
+        rospy.loginfo("move_base 연결 성공")
+
+        # ---------- make_plan 서비스 프록시 ----------
+        self.make_plan = None
+        try:
+            rospy.wait_for_service(self.make_plan_srv_name, timeout=10.0)
+            self.make_plan = rospy.ServiceProxy(self.make_plan_srv_name, GetPlan)
+            rospy.loginfo("make_plan 서비스 연결: %s", self.make_plan_srv_name)
+        except Exception as e:
+            rospy.logwarn("make_plan 서비스 연결 실패(%s). 경로 검증 없이 목표를 전송합니다.", str(e))
+
+        # 타임아웃 체크 타이머
+        rospy.Timer(rospy.Duration(1.0), self.timeout_check_timer)
+
+        # 첫 목표 전송
+        self.send_next_goal()
+
+    # ---------- 콜백 ----------
+    def map_cb(self, msg: OccupancyGrid):
+        self.map_grid = (msg.data, msg.info.width, msg.info.height,
+                         msg.info.resolution, msg.info.origin.position.x, msg.info.origin.position.y)
+
+    def amcl_cb(self, msg: PoseWithCovarianceStamped):
+        self.last_amcl = msg
+
+    # ---------- 음성 콜백: String ----------
+    def voice_cb_str(self, msg: String):
+        txt = msg.data.strip().lower()
+        rospy.loginfo("[VOICE:String] 수신: %s", txt)
+        if txt in (k.lower() for k in self.cmd_patrol_keywords):
+            self.set_mode(self.MODE_PATROL)
+        elif txt in (k.lower() for k in self.cmd_random_keywords):
+            self.set_mode(self.MODE_RANDOM)
+        elif txt in (k.lower() for k in self.cmd_stop_keywords):
+            self.stop_now()
+        else:
+            rospy.loginfo("[VOICE] 매칭되는 명령 없음")
+
+    # ---------- 음성 콜백: Int32 ----------
+    def voice_cb_int(self, msg: Int32):
+        val = int(msg.data)
+        rospy.loginfo("[VOICE:Int] 수신: %d", val)
+        if val == self.cmd_patrol_int:
+            self.set_mode(self.MODE_PATROL)
+        elif val == self.cmd_random_int:
+            self.set_mode(self.MODE_RANDOM)
+        elif val == self.cmd_stop_int:
+            self.stop_now()
+        else:
+            rospy.loginfo("[VOICE] 매칭되는 명령 없음")
+
+    # ---------- 모드 전환 ----------
+    def set_mode(self, new_mode):
+        if new_mode == self.mode:
+            rospy.loginfo("[MODE] 이미 %s 모드입니다.", new_mode)
+            return
+        rospy.logwarn("[MODE] %s -> %s 전환", self.mode, new_mode)
+        self.mode = new_mode
+        # 현재 goal 취소 후 새 목표 전송
+        try:
+            self.client.cancel_all_goals()
+        except Exception:
+            pass
+        self.is_goal_active = False
+        self.current_retries = 0
+        # 순찰 모드 들어갈 때 인덱스 초기화(원하면 유지해도 됨)
+        if self.mode == self.MODE_PATROL:
+            if not self.patrol_points:
+                rospy.logerr("[MODE] 순찰 모드인데 waypoints 없음. 랜덤 모드로 복귀.")
+                self.mode = self.MODE_RANDOM
+            else:
+                self.patrol_index = 0
+        rospy.Timer(rospy.Duration(0.5), lambda evt: self.send_next_goal(), oneshot=True)
+
+    def stop_now(self):
+        rospy.logwarn("[STOP] 목표 취소 및 정지")
+        try:
+            self.client.cancel_all_goals()
+        except Exception:
+            pass
+        self.is_goal_active = False
+        self.nav_cmd_pub.publish(Twist())
+
+    # ---------- 초기 포즈 ----------
+    def publish_initial_pose(self, times=5, hz=5):
+        r = rospy.Rate(hz)
+        for _ in range(times):
+            self.send_initial_pose(self.init_x, self.init_y, self.init_yaw_deg)
+            r.sleep()
+
+    def send_initial_pose(self, x, y, yaw_deg):
+        msg = PoseWithCovarianceStamped()
+        msg.header.stamp = rospy.Time.now()
+        msg.header.frame_id = 'map'
+        msg.pose.pose.position.x = x
+        msg.pose.pose.position.y = y
+        msg.pose.pose.orientation = Quaternion(*quaternion_from_euler(0, 0, math.radians(yaw_deg)))
+        msg.pose.covariance = [0.0]*36
+        msg.pose.covariance[0]  = 0.01
+        msg.pose.covariance[7]  = 0.01
+        msg.pose.covariance[35] = 0.05
+        rospy.loginfo("초기 포즈 → x=%.2f y=%.2f yaw=%.1f°", x, y, yaw_deg)
+        self.init_pub.publish(msg)
+
+    # ---------- Goal 생성/전송 ----------
+    def make_goal(self, x, y, yaw_deg):
+        g = MoveBaseGoal()
+        g.target_pose.header.frame_id = 'map'
+        g.target_pose.header.stamp = rospy.Time.now()
+        g.target_pose.pose.position = Point(x=x, y=y, z=0.0)
+        g.target_pose.pose.orientation = Quaternion(*quaternion_from_euler(0, 0, math.radians(yaw_deg)))
+        return g
+
+    def send_next_goal(self):
+        if self.mode == self.MODE_RANDOM:
+            ok, x, y, yaw = self.sample_random_reachable_goal()
+            if not ok:
+                rospy.logwarn("[Random] 도달 가능한 랜덤 목표 샘플 실패 → 3초 후 재시도")
+                rospy.Timer(rospy.Duration(3.0), lambda evt: self.send_next_goal(), oneshot=True)
+                return
+            goal = self.make_goal(x, y, yaw)
+            rospy.loginfo("[Random] Goal 전송: x=%.2f y=%.2f yaw=%.1f°", x, y, yaw)
+        else:
+            if self.patrol_index >= len(self.patrol_points):
+                rospy.loginfo("[Patrol] 순찰 완료 → 처음부터 반복")
+                self.patrol_index = 0
+            x, y, yaw = self.patrol_points[self.patrol_index]
+            goal = self.make_goal(x, y, yaw)
+            rospy.loginfo("[Patrol] Goal #%d 전송: x=%.2f y=%.2f yaw=%.1f°",
+                          self.patrol_index, x, y, yaw)
+
+        self.is_goal_active = True
+        self.current_retries = 0
+        self.goal_start_time = rospy.Time.now()
+        self.client.send_goal(goal, done_cb=self.done_cb)
+
+    # ---------- 랜덤 목표 샘플링 ----------
+    def sample_random_reachable_goal(self):
+        cur = self.get_current_xy()
+        if cur is None:
+            rospy.logwarn("[Random] 현재 위치(/amcl_pose) 미수신 → fallback 샘플 위주로 시도")
+
+        # 맵 기반 샘플
+        if self.random_use_map and self.map_grid is not None:
+            ok, x, y = self._sample_from_map(cur)
+            if ok:
+                yaw = self._choose_yaw(cur, (x, y))
+                if self._plan_ok(cur, (x, y)):
+                    return True, x, y, yaw
+                for _ in range(self.random_max_tries-1):
+                    ok2, x2, y2 = self._sample_from_map(cur)
+                    if not ok2:
+                        continue
+                    yaw2 = self._choose_yaw(cur, (x2, y2))
+                    if self._plan_ok(cur, (x2, y2)):
+                        return True, x2, y2, yaw2
+
+        # fallback: 사각 범위
+        for _ in range(self.random_max_tries):
+            x = random.uniform(self.random_x_range[0], self.random_x_range[1])
+            y = random.uniform(self.random_y_range[0], self.random_y_range[1])
+            if cur is not None and self._dist_xy(cur, (x, y)) < self.random_min_dist:
+                continue
+            yaw = self._choose_yaw(cur, (x, y))
+            if self._plan_ok(cur, (x, y)):
+                return True, x, y, yaw
+
+        return False, 0.0, 0.0, 0.0
+
+    def _sample_from_map(self, cur_xy):
+        grid, w, h, res, ox, oy = self.map_grid
+        tries = 0
+        while tries < self.random_max_tries:
+            ix = random.randint(0, w-1)
+            iy = random.randint(0, h-1)
+            val = grid[iy * w + ix]
+            if val != 0:  # 0 free, 100 occ, -1 unknown
+                tries += 1
+                continue
+            x = ox + (ix + 0.5) * res
+            y = oy + (iy + 0.5) * res
+            if cur_xy is not None and self._dist_xy(cur_xy, (x, y)) < self.random_min_dist:
+                tries += 1
+                continue
+            return True, x, y
+        return False, 0.0, 0.0
+
+    def _choose_yaw(self, cur_xy, goal_xy):
+        if self.random_yaw_any or cur_xy is None:
+            return random.uniform(-180.0, 180.0)
+        dx = goal_xy[0] - cur_xy[0]
+        dy = goal_xy[1] - cur_xy[1]
+        return math.degrees(math.atan2(dy, dx))
+
+    def _plan_ok(self, cur_xy, goal_xy, tol=0.2):
+        if self.make_plan is None or cur_xy is None:
+            return True
+        try:
+            start = PoseStamped()
+            start.header.frame_id = 'map'
+            start.header.stamp = rospy.Time.now()
+            start.pose.position.x = cur_xy[0]
+            start.pose.position.y = cur_xy[1]
+            start.pose.orientation = Quaternion(*quaternion_from_euler(0,0,0))
+
+            goal = PoseStamped()
+            goal.header.frame_id = 'map'
+            goal.header.stamp = rospy.Time.now()
+            goal.pose.position.x = goal_xy[0]
+            goal.pose.position.y = goal_xy[1]
+            goal.pose.orientation = Quaternion(*quaternion_from_euler(0,0,0))
+
+            req = GetPlanRequest()
+            req.start = start
+            req.goal = goal
+            req.tolerance = tol
+            resp = self.make_plan(req)
+            return (resp and resp.plan and len(resp.plan.poses) > 0)
+        except Exception as e:
+            rospy.logwarn("make_plan 호출 실패: %s → 경로검증 생략", str(e))
+            return True
+
+    def _dist_xy(self, a, b):
+        return math.hypot(a[0]-b[0], a[1]-b[1])
+
+    def get_current_xy(self):
+        if self.last_amcl is None:
+            return None
+        p = self.last_amcl.pose.pose.position
+        return (p.x, p.y)
+
+    # ---------- done 콜백 ----------
+    def done_cb(self, status, result):
+        if not self.is_goal_active:
+            return
+
+        self.is_goal_active = False
+        name = GoalStatus.to_string(status) if hasattr(GoalStatus, 'to_string') else str(status)
+        rospy.loginfo("[Result] %s", name)
+
+        if status == GoalStatus.SUCCEEDED:
+            if self.mode == self.MODE_PATROL:
+                self.patrol_index += 1
+            rospy.Timer(rospy.Duration(0.5), lambda evt: self.send_next_goal(), oneshot=True)
+        else:
+            if self.current_retries < self.max_retries:
+                self.current_retries += 1
+                rospy.logwarn("[Retry] 재시도 %d/%d", self.current_retries, self.max_retries)
+                rospy.Timer(rospy.Duration(1.0),
+                            lambda evt: self.resend_current_goal(), oneshot=True)
+            else:
+                rospy.logerr("[Skip] 재시도 초과 → 다음 목표로")
+                if self.mode == self.MODE_PATROL:
+                    self.patrol_index += 1
+                rospy.Timer(rospy.Duration(0.5),
+                            lambda evt: self.send_next_goal(), oneshot=True)
+
+    def resend_current_goal(self):
+        if self.is_goal_active:
+            return
+        if self.mode == self.MODE_RANDOM:
+            self.send_next_goal()
+            return
+        x, y, yaw = self.patrol_points[self.patrol_index]
+        goal = self.make_goal(x, y, yaw)
+        rospy.loginfo("[Resend] Goal #%d (retry %d/%d)",
+                      self.patrol_index, self.current_retries, self.max_retries)
+        self.is_goal_active = True
+        self.goal_start_time = rospy.Time.now()
+        self.client.send_goal(goal, done_cb=self.done_cb)
+
+    # ---------- 타임아웃 ----------
+    def timeout_check_timer(self, evt):
+        if not self.is_goal_active or self.goal_start_time is None:
+            return
+        elapsed = (rospy.Time.now() - self.goal_start_time).to_sec()
+        if elapsed > self.goal_timeout:
+            rospy.logwarn("[Timeout] %.1fs > %.1fs → cancel", elapsed, self.goal_timeout)
+            self.client.cancel_goal()
+
+    # ---------- 종료 훅 ----------
+    def shutdown(self):
+        rospy.loginfo("patrol_limo 종료 중...")
+        try:
+            self.client.cancel_all_goals()
+        except Exception:
+            pass
+        if self.final_stop_publish:
+            try:
+                self.nav_cmd_pub.publish(Twist())
+            except Exception:
+                pass
+
+
+def main():
+    node = PatrolLimo()
+    rospy.on_shutdown(node.shutdown)
+    rospy.spin()
+
+if __name__ == '__main__':
+    main()

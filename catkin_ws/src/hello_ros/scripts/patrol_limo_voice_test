@@ -1,0 +1,32 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import math, ast, random
+import actionlib
+import rospy
+from geometry_msgs.msg import Point, Quaternion, PoseWithCovarianceStamped, Twist, PoseStamped
+from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
+from tf.transformations import quaternion_from_euler
+from actionlib_msgs.msg import GoalStatus
+from nav_msgs.msg import OccupancyGrid
+from nav_msgs.srv import GetPlan, GetPlanRequest
+from std_msgs.msg import String, Int32
+
+
+class Voicetest(object):
+
+
+    def __init__(self):
+        rospy.init_node('voice', anonymous=True)
+        ## input : voice -> output : int(num) ex) 1 : patrol, 2 : working 3. hand, 4. hello
+
+       
+
+
+def main():
+    node = Voicetest()
+    rospy.on_shutdown(node.shutdown)
+    rospy.spin()
+
+if __name__ == '__main__':
+    main()
