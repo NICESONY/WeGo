@@ -119,7 +119,7 @@ catkin_install_python(PROGRAMS
   scripts/mode_manager
   scripts/mode_manager_simple
   scripts/patrol_limo_mode
-  scripts/patrol_limo_voice_tes
+  scripts/patrol_limo_voice_test
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
