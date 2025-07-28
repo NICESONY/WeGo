@@ -11,24 +11,70 @@ from actionlib_msgs.msg import GoalStatus
 from nav_msgs.msg import OccupancyGrid
 from nav_msgs.srv import GetPlan, GetPlanRequest
 from std_msgs.msg import String, Int32
+import subprocess
+from sound_play.libsoundplay import SoundClient
+
+
+
+'''
+## STT -> Input : voice -> Output : text -> int(num)
+## STT_Node -> message type : Voice_Iput.msg   message name : /Voice_Iput
+## input : voice -> output : int(num) ex) 1 : patrol, 2 : working 3. hand, 4. hello
+
+'''
 
 
 class Voicetest(object):
 
 
     def __init__(self):
-        rospy.init_node('voice', anonymous=True)
-        ## STT -> Input : voice -> Output : text -> int(num)
-        ## STT_Node -> message type : Voice_Iput.msg   message name : /Voice_Iput
-        ## input : voice -> output : int(num) ex) 1 : patrol, 2 : working 3. hand, 4. hello
+        rospy.init_node('stt_listener', anonymous=True)
+        rospy.loginfo("STT Listener started, waiting for messages on /stt_topic")
+        self.sub = rospy.Subscriber('/stt_topic', String, self.STTcallback)
 
-       
+        self.soundhandle = SoundClient()
+         # /tts_topic 토픽을 구독하면, msg.data에 담긴 텍스트를 음성으로 변환해 재생
+        rospy.Subscriber('/tts_topic', String, self.TTScallback)
+        rospy.loginfo("TTS node ready, waiting for text on /tts_topic")
 
 
-def main():
+    def shutdown(self):
+        rospy.loginfo("Shutting down Voicetest node.")
+        self.soundhandle.stopAll()  # 재생 중인 사운드 정지
+
+
+    def STTcallback(self, msg):
+        # 1) print 로
+        # print msg.data
+
+        # 2) rospy.loginfo 로 (원하는 방식으로 하나만 쓰셔도 됩니다)
+        rospy.loginfo("Received STT text: %s", msg.data)
+
+        if msg.data == "인사":
+            self.TTScallback(msg)
+            
+
+    def TTScallback(self, msg):
+        msg.data = "안녕하세요 제 이름은 리모입니다. 반갑습니다."
+        text = msg.data
+        rospy.loginfo("TTS -> “%s”" % text)
+
+        # 1) espeak로 WAV 파일 생성 (임시)
+        wav_path = '/tmp/tts_output.wav'
+        cmd = ["espeak", "-v", "ko", "-s", "140", "-w", wav_path, text]
+        subprocess.call(cmd)
+
+        # 2) sound_play를 이용해 재생
+        return self.soundhandle.playWave(wav_path)
+
+
+
+def main() :
     node = Voicetest()
     rospy.on_shutdown(node.shutdown)
     rospy.spin()
+    
 
 if __name__ == '__main__':
     main()
+

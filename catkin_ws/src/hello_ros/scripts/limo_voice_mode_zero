@@ -13,22 +13,36 @@ from nav_msgs.srv import GetPlan, GetPlanRequest
 from std_msgs.msg import String, Int32
 
 
+
+
+'''
+## STT -> Input : voice -> Output : text -> int(num)
+## STT_Node -> message type : Voice_Iput.msg   message name : /Voice_Iput
+## input : voice -> output : int(num) ex) 1 : patrol, 2 : working 3. hand, 4. hello
+
+'''
+
+
 class Voicetest(object):
 
 
     def __init__(self):
-        rospy.init_node('voice', anonymous=True)
-        ## STT -> Input : voice -> Output : text -> int(num)
-        ## STT_Node -> message type : Voice_Iput.msg   message name : /Voice_Iput
-        ## input : voice -> output : int(num) ex) 1 : patrol, 2 : working 3. hand, 4. hello
+        rospy.init_node('stt_listener', anonymous=True)
+        rospy.loginfo("STT Listener started, waiting for messages on /stt_topic")
+        self.sub = rospy.Subscriber('/stt_topic', String, self.callback)
 
-       
+    def callback(self, msg):
+        # 1) print 로
+        # print msg.data
 
+        # 2) rospy.loginfo 로 (원하는 방식으로 하나만 쓰셔도 됩니다)
+        rospy.loginfo("Received STT text: %s", msg.data)
 
-def main():
+def main() :
     node = Voicetest()
     rospy.on_shutdown(node.shutdown)
     rospy.spin()
 
 if __name__ == '__main__':
     main()
+
