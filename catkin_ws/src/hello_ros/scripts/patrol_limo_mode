@@ -13,7 +13,7 @@ from nav_msgs.srv import GetPlan, GetPlanRequest
 from std_msgs.msg import String, Int32
 
 
-class PatrolLimo(object):
+class PatrolLimo(object) :
     MODE_RANDOM = "random"
     MODE_PATROL = "patrol"
 

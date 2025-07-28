@@ -18,7 +18,8 @@ class Voicetest(object):
 
     def __init__(self):
         rospy.init_node('voice', anonymous=True)
-        ## STT -> Intpu : voice -> Output : text -> int(num
+        ## STT -> Input : voice -> Output : text -> int(num)
+        ## STT_Node -> message type : Voice_Iput.msg   message name : /Voice_Iput
         ## input : voice -> output : int(num) ex) 1 : patrol, 2 : working 3. hand, 4. hello
 
        

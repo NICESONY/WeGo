@@ -1,0 +1,4 @@
+<launch>
+  <node pkg="stt_node" type="stt_node.py" name="stt_node" output="screen"/>
+</launch>
+

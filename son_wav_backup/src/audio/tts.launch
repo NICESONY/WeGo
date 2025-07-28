@@ -1,0 +1,7 @@
+<launch>
+  <!-- TTS 노드 -->
+  <node pkg="audio" type="tts_node.py" name="tts_node" output="screen"/>
+  <!-- sound_play 노드 -->
+  <node pkg="sound_play" type="soundplay_node.py" name="soundplay_node" output="screen"/>
+</launch>
+
