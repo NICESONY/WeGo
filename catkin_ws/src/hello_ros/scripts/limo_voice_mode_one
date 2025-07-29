@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 import math, ast, random
@@ -13,7 +13,7 @@ from nav_msgs.srv import GetPlan, GetPlanRequest
 from std_msgs.msg import String, Int32
 import subprocess
 from sound_play.libsoundplay import SoundClient
-
+from geometry_msgs.msg import Twist
 
 
 '''
@@ -28,14 +28,21 @@ class Voicetest(object):
 
 
     def __init__(self):
-        rospy.init_node('stt_listener', anonymous=True)
+        rospy.init_node('limo_voice_mode_one', anonymous=True)
         rospy.loginfo("STT Listener started, waiting for messages on /stt_topic")
         self.sub = rospy.Subscriber('/stt_topic', String, self.STTcallback)
 
         self.soundhandle = SoundClient()
          # /tts_topic 토픽을 구독하면, msg.data에 담긴 텍스트를 음성으로 변환해 재생
-        rospy.Subscriber('/tts_topic', String, self.TTScallback)
+        rospy.Subscriber('/tts_topic', String, self.HI_TTScallback)
+        rospy.Subscriber('/tts_topic', String, self.smlie_TTScallback)
+        rospy.Subscriber('/tts_topic', String, self.sorry_TTScallback)
+        rospy.Subscriber('/tts_topic', String, self.else_TTScallback)
+        rospy.Subscriber('/tts_topic', String, self.go_spin_for_duration)
         rospy.loginfo("TTS node ready, waiting for text on /tts_topic")
+        self.cmd_vel_pub_go = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
+        self.cmd_vel_pub_back = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
+        self.cmd_vel_pub_spin = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
 
 
     def shutdown(self):
@@ -44,17 +51,26 @@ class Voicetest(object):
 
 
     def STTcallback(self, msg):
-        # 1) print 로
-        # print msg.data
-
-        # 2) rospy.loginfo 로 (원하는 방식으로 하나만 쓰셔도 됩니다)
+        # rospy.loginfo text print
         rospy.loginfo("Received STT text: %s", msg.data)
 
-        if msg.data == "인사":
-            self.TTScallback(msg)
+        if msg.data == "인사" or msg.data == "인사하자":
+            self.HI_TTScallback(msg)
+        elif msg.data == "웃음" or msg.data == "웃자":
+            self.smlie_TTScallback(msg)
+        elif msg.data == "미안" or msg.data == "미안해":
+            self.sorry_TTScallback(msg)
+        elif msg.data == "앞으로" :
+            self.go_forward_for_duration(2.0)  # 2.0초 동안 이동
+        elif msg.data == "뒤로" :
+            self.go_backward_for_duration(2.0)
+        elif msg.data == "회전" :
+            self.go_spin_for_duration(msg, 2.0)
+        else:
+            self.else_TTScallback(msg)
             
 
-    def TTScallback(self, msg):
+    def HI_TTScallback(self, msg):
         msg.data = "안녕하세요 제 이름은 리모입니다. 반갑습니다."
         text = msg.data
         rospy.loginfo("TTS -> “%s”" % text)
@@ -66,8 +82,104 @@ class Voicetest(object):
 
         # 2) sound_play를 이용해 재생
         return self.soundhandle.playWave(wav_path)
+    
+
+    def smlie_TTScallback(self, msg):
+        msg.data = "하하하호호호 웃음이 나네요."
+        text = msg.data
+        rospy.loginfo("TTS -> “%s”" % text)
+
+        # 1) espeak로 WAV 파일 생성 (임시)
+        wav_path = '/tmp/smile_tts_output.wav'
+        cmd = ["espeak", "-v", "ko", "-s", "140", "-w", wav_path, text]
+        subprocess.call(cmd)
+
+        # 2) sound_play를 이용해 재생
+        return self.soundhandle.playWave(wav_path)
+
+    def sorry_TTScallback(self, msg):
+        msg.data = "당연히 미안해 해야죠 하하하"
+        text = msg.data
+        rospy.loginfo("TTS -> “%s”" % text)
+
+        # 1) espeak로 WAV 파일 생성 (임시)
+        wav_path = '/tmp/sorry_tts_output.wav'
+        cmd = ["espeak", "-v", "ko", "-s", "140", "-w", wav_path, text]
+        subprocess.call(cmd)
+
+        # 2) sound_play를 이용해 재생
+        return self.soundhandle.playWave(wav_path)
+    
+
+    def go_forward_for_duration(self, duration=2.0):
+        twist = Twist()
+        twist.linear.x = 0.2  # 전진 속도
+        twist.angular.z = 0.0
+
+        rospy.loginfo("로봇 전진 시작 (%s초)", duration)
+        self.cmd_vel_pub_go.publish(twist)
+
+        rospy.sleep(duration)  # duration(초) 동안 대기
+
+        twist.linear.x = 0.0  # 멈춤
+        self.cmd_vel_pub_go.publish(twist)
+        rospy.loginfo("로봇 정지 완료")
+
+    def go_backward_for_duration(self, duration=2.0):
+        twist = Twist()
+        twist.linear.x = - 0.2  # 속도
+        twist.angular.z = 0.0
+
+        rospy.loginfo("로봇 전진 시작 (%s초)", duration)
+        self.cmd_vel_pub_back.publish(twist)
+
+        rospy.sleep(duration)  # duration(초) 동안 대기
+
+        twist.linear.x = 0.0  # 멈춤
+        self.cmd_vel_pub_back.publish(twist)
+        rospy.loginfo("로봇 정지 완료")
+
+    def go_spin_for_duration(self, msg,  duration=2.0):
+        twist = Twist()
+        twist.linear.x = 0.0
+        twist.angular.z = 0.5  # 회전 속도  
+
+        rospy.loginfo("로봇 회전 시작 (%s초)", duration)
+        self.cmd_vel_pub_spin.publish(twist)
+
+        rospy.sleep(duration)  # duration(초) 동안 대기     
+        twist.angular.z = 0.0
+        self.cmd_vel_pub_spin.publish(twist)
+        rospy.loginfo("로봇 회전 완료")
+        
+        msg.data = "어질어질하네요 하하하"
+        text = msg.data
+        rospy.loginfo("TTS -> “%s”" % text)
+
+        # 1) espeak로 WAV 파일 생성 (임시)
+        wav_path = '/tmp/sorry_tts_output.wav'
+        cmd = ["espeak", "-v", "ko", "-s", "140", "-w", wav_path, text]
+        subprocess.call(cmd)
+
+        # 2) sound_play를 이용해 재생
+        return self.soundhandle.playWave(wav_path)
 
 
+    def else_TTScallback(self, msg):
+        msg.data = "아직 학습하지 못한 기능입니다. 알려주세요"
+        text = msg.data
+        rospy.loginfo("TTS -> “%s”" % text)
+
+        # 1) espeak로 WAV 파일 생성 (임시)
+        wav_path = '/tmp/else_tts_output.wav'
+        cmd = ["espeak", "-v", "ko", "-s", "140", "-w", wav_path, text]
+        subprocess.call(cmd)
+
+        # 2) sound_play를 이용해 재생
+        return self.soundhandle.playWave(wav_path)
+
+
+    
 
 def main() :
     node = Voicetest()
