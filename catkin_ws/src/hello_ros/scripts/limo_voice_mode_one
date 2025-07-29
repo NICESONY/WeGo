@@ -40,9 +40,10 @@ class Voicetest(object):
         rospy.Subscriber('/tts_topic', String, self.else_TTScallback)
         rospy.Subscriber('/tts_topic', String, self.go_spin_for_duration)
         rospy.loginfo("TTS node ready, waiting for text on /tts_topic")
-        self.cmd_vel_pub_go = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
-        self.cmd_vel_pub_back = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
-        self.cmd_vel_pub_spin = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
+
+        self.cmd_vel_pub= rospy.Publisher('/cmd_vel', Twist, queue_size=10)
+        # self.cmd_vel_pub_back = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
+        # self.cmd_vel_pub_spin = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
 
 
         # 1) 라치 퍼블리셔: /initialpose 메시지를 구독자가 없어도 버퍼에 저장
@@ -87,7 +88,7 @@ class Voicetest(object):
         self.soundhandle.stopAll()  # 재생 중인 사운드 정지
 
 
-    def STTcallback(self, msg):
+    def STTcallback(self, msg) :
         # rospy.loginfo text print
         rospy.loginfo("Received STT text: %s", msg.data)
 
@@ -160,12 +161,12 @@ class Voicetest(object):
         twist.angular.z = 0.0
 
         rospy.loginfo("로봇 전진 시작 (%s초)", duration)
-        self.cmd_vel_pub_go.publish(twist)
+        self.cmd_vel_pub.publish(twist)
 
         rospy.sleep(duration)  # duration(초) 동안 대기
 
         twist.linear.x = 0.0  # 멈춤
-        self.cmd_vel_pub_go.publish(twist)
+        self.cmd_vel_pub.publish(twist)
         rospy.loginfo("로봇 정지 완료")
 
     def go_backward_for_duration(self, duration=2.0):
@@ -174,12 +175,12 @@ class Voicetest(object):
         twist.angular.z = 0.0
 
         rospy.loginfo("로봇 전진 시작 (%s초)", duration)
-        self.cmd_vel_pub_back.publish(twist)
+        self.cmd_vel_pub.publish(twist)
 
         rospy.sleep(duration)  # duration(초) 동안 대기
 
         twist.linear.x = 0.0  # 멈춤
-        self.cmd_vel_pub_back.publish(twist)
+        self.cmd_vel_pub.publish(twist)
         rospy.loginfo("로봇 정지 완료")
 
     def go_spin_for_duration(self, msg,  duration=2.0):
@@ -188,11 +189,11 @@ class Voicetest(object):
         twist.angular.z = 0.5  # 회전 속도  
 
         rospy.loginfo("로봇 회전 시작 (%s초)", duration)
-        self.cmd_vel_pub_spin.publish(twist)
+        self.cmd_vel_pub.publish(twist)
 
         rospy.sleep(duration)  # duration(초) 동안 대기     
         twist.angular.z = 0.0
-        self.cmd_vel_pub_spin.publish(twist)
+        self.cmd_vel_pub.publish(twist)
         rospy.loginfo("로봇 회전 완료")
         
         msg.data = "어질어질하네요 하하하"
