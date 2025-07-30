@@ -174,6 +174,7 @@ catkin_install_python(PROGRAMS
   scripts/control_two.py
   scripts/Two_Line_detect_v2.py
   scripts/Line_detect_contest.py
+  scripts/person_follower.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 ## Mark executables for installation
