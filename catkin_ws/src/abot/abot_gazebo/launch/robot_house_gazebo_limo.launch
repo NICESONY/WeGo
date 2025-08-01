@@ -15,7 +15,7 @@
 
   <!-- urdf xml robot description loaded on the Parameter Server-->
 
-  <param name="robot_description" command="$(find xacro)/xacro '$(find abot_description)/urdf/robot.urdf.xacro'" /> 
+  <param name="robot_description" command="$(find xacro)/xacro '$(find limo_description)/urdf/limo_four_diff_no_namespace.xacro'" /> 
 
 
   <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" ></node> 

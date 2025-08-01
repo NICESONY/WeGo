@@ -2,9 +2,8 @@
 
 <robot name="limo_four_diff" xmlns:xacro="http://ros.org/wiki/xacro">
 
-    <xacro:arg name="robot_namespace" default="" />
     <xacro:include filename="$(find limo_description)/urdf/limo_xacro.xacro" />
-    <xacro:include filename="$(find limo_description)/urdf/limo_four_diff.gazebo" />
+    <xacro:include filename="$(find limo_description)/urdf/limo_four_diff_no_namespace.gazebo" />
     
 
     <!-- Variables -->

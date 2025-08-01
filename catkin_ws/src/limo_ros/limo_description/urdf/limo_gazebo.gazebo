@@ -55,7 +55,8 @@
                 </noise>
               </ray>
               <plugin name="gazebo_ros_laser_sensor" filename="libgazebo_ros_laser.so">
-                <topicName>/limo/scan</topicName>
+                <!-- <topicName>/limo/scan</topicName> -->
+                <topicName>/scan</topicName>
                 <frameName>laser_link</frameName>
               </plugin>
             </sensor>
@@ -123,7 +124,8 @@
           <visualize>true</visualize>
           <topic>__default_topic__</topic>
           <plugin filename="libgazebo_ros_imu_sensor.so" name="imu_plugin">
-            <topicName>/limo/imu</topicName>
+            <!-- <topicName>/limo/imu</topicName> -->
+            <topicName>/imu</topicName>
             <bodyName>${frame_prefix}_link</bodyName>
             <updateRateHZ>100.0</updateRateHZ>
             <gaussianNoise>0.001</gaussianNoise>
