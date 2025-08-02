@@ -6,6 +6,8 @@
       <remap from="/hokuyo_base/scan" to="/scan" />
       <param name="winSize" value="2" type="int" />
       <param name="deltaDist" value="0.2" type="double" />
+      <param name="angle_min"   value="-0.8" />
+      <param name="angle_max"   value=" 0.8" />
     </node>
     
     <!-- 로봇 제어 명령 토픽 리매핑 -->

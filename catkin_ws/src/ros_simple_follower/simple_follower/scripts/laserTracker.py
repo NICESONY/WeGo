@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-# test mail: chutter@uos.de
+# -*- coding: utf-8 -*-
+
 
 import rospy
 import thread, threading
@@ -12,74 +13,74 @@ from simple_follower.msg import position as PositionMsg
 		
 class laserTracker:
 	def __init__(self):
-		self.lastScan=None
-		self.winSize = rospy.get_param('~winSize')
+		self.lastScan = None
+		self.winSize   = rospy.get_param('~winSize')
 		self.deltaDist = rospy.get_param('~deltaDist')
-		self.scanSubscriber = rospy.Subscriber('/scan', LaserScan, self.registerScan)
-		self.positionPublisher = rospy.Publisher('/object_tracker/current_position', PositionMsg,queue_size=3)
-		self.infoPublisher = rospy.Publisher('/object_tracker/info', StringMsg, queue_size=3)
+		# 사용할 각도 범위 (rad) — 기본값 ±0.8rad
+		self.angle_min = rospy.get_param('~angle_min', -0.8)
+		self.angle_max = rospy.get_param('~angle_max', +0.8)
+
+		self.scanSubscriber    = rospy.Subscriber('/scan', LaserScan, self.registerScan)
+		self.positionPublisher = rospy.Publisher('/object_tracker/current_position', PositionMsg, queue_size=3)
+		self.infoPublisher     = rospy.Publisher('/object_tracker/info', StringMsg, queue_size=3)
 
 	def registerScan(self, scan_data):
-		# registers laser scan and publishes position of closest object (or point rather)
-		ranges = np.array(scan_data.ranges)
-		ranges_list = []
-		for i in ranges :
-			if i > 0.1:
-				ranges_list.append(i)
-			else:
-				ranges_list.append(float('inf'))
-		ranges = ranges_list
+		# --- 원본 거리 필터링 코드 (주석 처리) ---
+		# ranges = np.array(scan_data.ranges)
+		# ranges_list = []
+		# for i in ranges :
+		#     if i > 0.1:
+		#         ranges_list.append(i)
+		#     else:
+		#         ranges_list.append(float('inf'))
+		# ranges = ranges_list
 
-		# ranges = [i > 0.1 ? i : float(inf) for i in ranges]
-		# ranges = [i for i in ranges if  i > 0.1 else float(inf)]   # filter out all ranges that are 0.0 or NaN
-		# sort by distance to check from closer to further away points if they might be something real
+		# 1) 각도 & 거리 필터링 적용
+		angles = scan_data.angle_min + np.arange(len(scan_data.ranges)) * scan_data.angle_increment
+		ranges = []
+		for i, raw_dist in enumerate(scan_data.ranges):
+			angle = angles[i]
+			# 1. 각도 범위를 벗어나면 무시
+			if angle < self.angle_min or angle > self.angle_max:
+				ranges.append(float('inf'))
+				continue
+			# 2. 10cm 이하 또는 invalid 값은 노이즈로 간주
+			if raw_dist <= 0.1 or np.isinf(raw_dist) or np.isnan(raw_dist):
+				ranges.append(float('inf'))
+				continue
+			# 3. 나머지는 유효 거리
+			ranges.append(raw_dist)
+
+		# numpy array 로 변환
+		ranges = np.array(ranges)
+		# 거리 순 정렬
 		sortedIndices = np.argsort(ranges)
 		
 		minDistanceID = None
 		minDistance   = float('inf')		
 
-		if(not(self.lastScan is None)):
-			# if we already have a last scan to compare to:
+		if self.lastScan is not None:
 			for i in sortedIndices:
-				# check all distance measurements starting from the closest one
-				tempMinDistance   = ranges[i]
-				
-				# now we check if this might be noise:
-				# get a window. in it we will check if there has been a scan with similar distance
-				# in the last scan within that window
-				
-				# we kneed to clip the window so we don't have an index out of bounds
-				windowIndex = np.clip([i-self.winSize, i+self.winSize+1],0,len(self.lastScan))
+				tempMinDistance = ranges[i]
+				windowIndex = np.clip([i-self.winSize, i+self.winSize+1], 0, len(self.lastScan))
+				# self.lastScan 도 numpy array 이므로 슬라이스 결과는 numpy array
 				window = self.lastScan[windowIndex[0]:windowIndex[1]]
-
 				with np.errstate(invalid='ignore'):
-					# check if any of the scans in the window (in the last scan) has a distance close enough to the current one
-					if(np.any(abs(window-tempMinDistance)<=self.deltaDist)):
-					# this will also be false for all tempMinDistance = NaN or inf
-
-						# we found a plausible distance
+					if np.any(np.abs(window - tempMinDistance) <= self.deltaDist):
 						minDistanceID = i
-						minDistance = ranges[minDistanceID]
-						break # at least one point was equally close
-						# so we found a valid minimum and can stop the loop
-			
-		self.lastScan=ranges	
-		
-		#catches no scan, no minimum found, minimum is actually inf
-		if(minDistance > scan_data.range_max):
-			#means we did not really find a plausible object
-			
-			# publish warning that we did not find anything
-			rospy.logwarn('laser no object found')
-			self.infoPublisher.publish(StringMsg('laser:nothing found'))
-			
-		else:
-			# calculate angle of the objects location. 0 is straight ahead
-			minDistanceAngle = scan_data.angle_min + minDistanceID * scan_data.angle_increment
-			# here we only have an x angle, so the y is set arbitrarily
-			self.positionPublisher.publish(PositionMsg(minDistanceAngle, 42, minDistance))
-			
+						minDistance   = tempMinDistance
+						break
 
+		# 다음 스캔 비교를 위해 numpy array 로 저장
+		self.lastScan = ranges  
+		
+		# 유효 객체 미검출 처리
+		if minDistance > scan_data.range_max:
+			rospy.logwarn('laser: no object found')
+			self.infoPublisher.publish(StringMsg('laser:nothing found'))
+		else:
+			minDistanceAngle = scan_data.angle_min + minDistanceID * scan_data.angle_increment
+			self.positionPublisher.publish(PositionMsg(minDistanceAngle, 42, minDistance))
 
 
 if __name__ == '__main__':
@@ -91,6 +92,3 @@ if __name__ == '__main__':
 		rospy.spin()
 	except rospy.ROSInterruptException:
 		print('exception')
-
-
-
