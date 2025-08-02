@@ -18,7 +18,7 @@ class Follower:
 		# self.controllerLossTimer.start()
 		self.switchMode= rospy.get_param('~switchMode') # if this is set to False the O button has to be kept pressed in order for it to move
 		self.max_speed = rospy.get_param('~maxSpeed') 
-		self.controllButtonIndex = rospy.get_param('~controllButtonIndex')
+		# self.controllButtonIndex = rospy.get_param('~controllButtonIndex')
 
 		# self.buttonCallbackBusy=False	
 		# self.active=False
@@ -140,11 +140,6 @@ class simplePID:
 		return self.Kp*P + self.Ki*I + self.Kd*D
 		
 		
-	
-
-			
-
-
 
 
 if __name__ == '__main__':
