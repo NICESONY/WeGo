@@ -14,7 +14,9 @@ from std_msgs.msg import String, Int32
 import subprocess
 from sound_play.libsoundplay import SoundClient
 from geometry_msgs.msg import Twist
-
+from std_msgs.msg import Bool
+from simple_follower.msg import position as PositionMsg
+from std_msgs.msg import String as StringMsg
 
 '''
 ## STT -> Input : voice -> Output : text -> int(num)
@@ -42,6 +44,10 @@ class Voicetest(object):
         rospy.loginfo("TTS node ready, waiting for text on /tts_topic")
 
         self.cmd_vel_pub= rospy.Publisher('/cmd_vel', Twist, queue_size=10)
+        self.laserTracker= rospy.Publisher('/laser_tracker', Bool, queue_size=10)
+        self.follower_laser = rospy.Publisher('/follower_laser', Bool, queue_size=10)
+
+
         # self.cmd_vel_pub_back = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
         # self.cmd_vel_pub_spin = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
 
@@ -50,7 +56,7 @@ class Voicetest(object):
         self.init_pub = rospy.Publisher(
             '/limo/initialpose',
             PoseWithCovarianceStamped,
-            queue_size=1,
+            queue_size = 1,
             latch=True
         )
 
@@ -82,6 +88,11 @@ class Voicetest(object):
         self.is_goal_active = False
 
 
+        ## follower mode
+        self.followe_laser = False
+        self.laserTracker = False
+
+
 
     def shutdown(self):
         rospy.loginfo("Shutting down Voicetest node.")
@@ -110,8 +121,26 @@ class Voicetest(object):
             rospy.loginfo("집에 도착했습니다. 순찰 모드 종료.")
             self.is_goal_active = True
             # self.shutdown()
+
+
+        elif msg.data == "산책가자" or msg.data == "산책":
+             self.follower_laser = True and self.laserTracker = True
+             self.laserTracker.publish(Bool(self.laserTracker))
+             self.follower_laser.publish(Bool(self.follower_laser))
+             rospy.loginfo("산책 모드로 전환되었습니다.")
+
+
+        elif msg.data == "산책 끝" or msg.data == "산책 끝났어":
+            self.follower_laser = False and self.laserTracker = False 
+            self.laserTracker.publish(Bool(self.laserTracker))
+            self.follower_laser.publish(Bool(self.follower_laser))
+            rospy.loginfo("산책 모드가 종료되었습니다.")
         else:
             self.else_TTScallback(msg)
+
+
+   
+
             
 
     def HI_TTScallback(self, msg):
@@ -140,6 +169,7 @@ class Voicetest(object):
 
         # 2) sound_play를 이용해 재생
         return self.soundhandle.playWave(wav_path)
+
 
     def sorry_TTScallback(self, msg):
         msg.data = "당연히 미안해 해야죠 하하하"

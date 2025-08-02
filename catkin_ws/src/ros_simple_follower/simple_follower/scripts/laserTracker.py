@@ -1,15 +1,15 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 
 import rospy
-import thread, threading
 import time
 import numpy as np
 from sensor_msgs.msg import Joy, LaserScan
 from geometry_msgs.msg import Twist, Vector3
 from std_msgs.msg import String as StringMsg
 from simple_follower.msg import position as PositionMsg
+from std_msgs.msg import Bool
 		
 class laserTracker:
 	def __init__(self):
@@ -23,6 +23,15 @@ class laserTracker:
 		self.scanSubscriber    = rospy.Subscriber('/scan', LaserScan, self.registerScan)
 		self.positionPublisher = rospy.Publisher('/object_tracker/current_position', PositionMsg, queue_size=3)
 		self.infoPublisher     = rospy.Publisher('/object_tracker/info', StringMsg, queue_size=3)
+		self.laserTracker = rospy.Subscriber('/laser_tracker', Bool, self.laser_tracker)
+
+		self.laser_tracker = False
+
+	def laser_tracker(self, msg):
+		self.laser_tracker = msg.data
+		rospy.loginfo(f"[laser_tracker] mode = {self.laser_tracker}")
+
+
 
 	def registerScan(self, scan_data):
 		# --- 원본 거리 필터링 코드 (주석 처리) ---
@@ -34,6 +43,9 @@ class laserTracker:
 		#     else:
 		#         ranges_list.append(float('inf'))
 		# ranges = ranges_list
+
+		if not self.laser_tracker :
+			return
 
 		# 1) 각도 & 거리 필터링 적용
 		angles = scan_data.angle_min + np.arange(len(scan_data.ranges)) * scan_data.angle_increment

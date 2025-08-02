@@ -2,31 +2,30 @@
 # test mail: chutter@uos.de
 
 import rospy
-import _thread as thread
-import threading
 import time
 import numpy as np
 from sensor_msgs.msg import Joy, LaserScan
 from geometry_msgs.msg import Twist, Vector3
 from simple_follower.msg import position as PositionMsg
 from std_msgs.msg import String as StringMsg
+from std_msgs.msg import Bool
 
 class Follower:
 	def __init__(self):
 		# as soon as we stop receiving Joy messages from the ps3 controller we stop all movement:
-		# self.controllerLossTimer = threading.Timer(1, self.controllerLoss) #if we lose connection
-		# self.controllerLossTimer.start()
+
 		self.switchMode= rospy.get_param('~switchMode') # if this is set to False the O button has to be kept pressed in order for it to move
 		self.max_speed = rospy.get_param('~maxSpeed') 
-		# self.controllButtonIndex = rospy.get_param('~controllButtonIndex')
 
-		# self.buttonCallbackBusy=False	
-		# self.active=False
 
 
 		self.cmdVelPublisher = rospy.Publisher('/cmd_vel', Twist, queue_size =3)
-		# the topic for the messages from the ps3 controller (game pad)
-		# self.joySubscriber = rospy.Subscriber('joy', Joy, self.buttonCallback)
+
+		# 내부 상태 변수
+        # self.walk_mode = False
+		self.follower_laser = rospy.Subscriber('/follower_laser', Bool, self.follower_laser)
+
+
 
 		# the topic for the tracker that gives us the current position of the object we are following
 		self.positionSubscriber = rospy.Subscriber('/object_tracker/current_position', PositionMsg, self.positionUpdateCallback)
@@ -38,9 +37,17 @@ class Follower:
 		PID_param = rospy.get_param('~PID_controller')
 		# the first parameter is the angular target (0 degrees always) the second is the target distance (say 1 meter)
 		self.PID_controller = simplePID([0, targetDist], PID_param['P'], PID_param['I'], PID_param['D'])
+		self.walk_mode = False
+
 
 		# # this method gets called when the process is killed with Ctrl+C
 		# rospy.on_shutdown(self.controllerLoss)
+
+	def follower_laser(self, msg):
+		self.walk_mode = msg.data
+		rospy.loginfo(f"[Follower] walk_mode = {self.walk_mode}")
+
+
 
 	def trackerInfoCallback(self, info):
 		# we do not handle any info from the object tracker specifically at the moment. just ignore that we lost the object for example
@@ -48,9 +55,9 @@ class Follower:
 	
 	def positionUpdateCallback(self, position):
 		# gets called whenever we receive a new position. It will then update the motorcomand
-	
-		# if(not(self.active)):
-		# 	return #if we are not active we will return imediatly without doing anything
+
+		if not self.walk_mode:
+			return 
 
 		angleX= position.angleX
 		distance = position.distance
@@ -116,14 +123,14 @@ class simplePID:
 		if(self.timeOfLastCall is None):
 			# the PID was called for the first time. we don't know the deltaT yet
 			# no controll signal is applied
-			self.timeOfLastCall = time.clock()
+			self.timeOfLastCall = time.perf_counter()
 			return np.zeros(np.size(current_value))
 
 		
 		error = self.setPoint - current_value
 		P =  error
 		
-		currentTime = time.clock()
+		currentTime = time.perf_counter()
 		deltaT      = (currentTime-self.timeOfLastCall)
 
 		# integral of the error is current error * time since last update
