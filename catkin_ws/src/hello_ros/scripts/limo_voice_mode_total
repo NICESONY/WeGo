@@ -17,6 +17,12 @@ from geometry_msgs.msg import Twist
 from std_msgs.msg import Bool
 from simple_follower.msg import position as PositionMsg
 from std_msgs.msg import String as StringMsg
+import cv2
+import requests
+import os
+from sensor_msgs.msg import Image
+from cv_bridge import CvBridge, CvBridgeError
+
 
 '''
 ## STT -> Input : voice -> Output : text -> int(num)
@@ -141,9 +147,60 @@ class Voicetest(object):
             self.laserTracker.publish(Bool(self.laserTracker))
             self.follower_laser.publish(Bool(self.follower_laser))
             rospy.loginfo("산책 모드가 종료되었습니다.")
+
+
+        elif msg.data == "불이야" or msg.data == "화재" or msg.data == "화재야" or msg.data == "쿵":
+            return self.capture_image()
+
+
         else:
             self.else_TTScallback(msg)
 
+
+
+
+
+    def capture_image(self):
+        # 1) 저장 폴더(선택)
+        image_folder = rospy.get_param("~image_folder", "/tmp/fire_images")
+        os.makedirs(image_folder, exist_ok=True)
+
+        # 2) 카메라 캡처
+        cap = cv2.VideoCapture(0)
+        if not cap.isOpened():
+            rospy.logerr("카메라 열기 실패 (index=0)")
+            return None
+        ret, frame = cap.read()
+        cap.release()
+        if not ret:
+            rospy.logerr("프레임 캡처 실패")
+            return None
+
+        # 3) 로컬 저장(선택)
+        ts = rospy.Time.now().to_nsec()
+        local_path = os.path.join(image_folder, f"fire_{ts}.jpg")
+        if not cv2.imwrite(local_path, frame):
+            rospy.logerr("로컬 저장 실패")
+            return None
+
+        # 4) JPG 바이트로 인코딩
+        success, buf = cv2.imencode(".jpg", frame)
+        if not success:
+            rospy.logerr("이미지 인코딩 실패")
+            return None
+
+        # 5) FastAPI 업로드
+        api_url = rospy.get_param("~fastapi_url", "http://127.0.0.1:8000/images")
+        files = {"file": ("frame.jpg", buf.tobytes(), "image/jpeg")}
+        try:
+            resp = requests.post(api_url, files=files, timeout=3)
+            resp.raise_for_status()
+            url = resp.json().get("url")
+            rospy.loginfo(f"웹 업로드 성공: {url}")   # 예: /static/images/abcd1234.jpg
+            return url                               # 필요하다면 호출부에 반환
+        except Exception as e:
+            rospy.logerr(f"웹 업로드 실패: {e}")
+            return None
 
    
     def last_hello(self, msg):
