@@ -18,13 +18,11 @@ class Follower:
 		self.max_speed = rospy.get_param('~maxSpeed') 
 
 
-
 		self.cmdVelPublisher = rospy.Publisher('/cmd_vel', Twist, queue_size =3)
 
 		# 내부 상태 변수
         # self.walk_mode = False
 		self.follower_laser = rospy.Subscriber('/follower_laser', Bool, self.follower_laser)
-
 
 
 		# the topic for the tracker that gives us the current position of the object we are following
